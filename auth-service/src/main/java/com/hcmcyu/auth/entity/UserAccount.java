@@ -29,6 +29,13 @@ public class UserAccount {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false, length = 30)
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    @Column(name = "provider_subject")
+    private String providerSubject;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private Role role;
 
@@ -97,6 +104,22 @@ public class UserAccount {
         this.passwordHash = passwordHash;
     }
 
+    public AuthProvider getAuthProvider() {
+        return authProvider;
+    }
+
+    public void setAuthProvider(AuthProvider authProvider) {
+        this.authProvider = authProvider;
+    }
+
+    public String getProviderSubject() {
+        return providerSubject;
+    }
+
+    public void setProviderSubject(String providerSubject) {
+        this.providerSubject = providerSubject;
+    }
+
     public Role getRole() {
         return role;
     }
@@ -137,4 +160,3 @@ public class UserAccount {
         this.enabled = enabled;
     }
 }
-

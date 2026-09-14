@@ -7,6 +7,8 @@ spring:
 auth:
   internal:
     secret: ${AUTH_INTERNAL_SECRET}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
   jwt:
     secret: ${AUTH_JWT_SECRET}
 

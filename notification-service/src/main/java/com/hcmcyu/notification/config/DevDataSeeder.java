@@ -30,24 +30,24 @@ public class DevDataSeeder implements CommandLineRunner {
         List<String> allMembers = demoMemberIds();
         seedNotification(
                 NotificationType.SYSTEM,
-                "Chao mung den voi HCMCYU",
-                "Day la thong bao mau cho moi truong development.",
+                "Chào mừng đến với HCMCYU",
+                "Đây là thông báo mẫu cho môi trường development.",
                 ReferenceType.SYSTEM,
                 null,
                 allMembers
         );
         seedNotification(
                 NotificationType.EVENT_NEW,
-                "Co su kien moi",
-                "Moi doan vien kiem tra lich hoat dong sap toi.",
+                "Có sự kiện mới",
+                "Mời đoàn viên kiểm tra lịch hoạt động sắp tới.",
                 ReferenceType.EVENT,
                 "dev-event",
                 allMembers
         );
         seedNotification(
                 NotificationType.POST_NEW,
-                "Co bai viet moi",
-                "Doan phuong vua cap nhat mot bai viet moi.",
+                "Có bài viết mới",
+                "Đoàn phường vừa cập nhật một bài viết mới.",
                 ReferenceType.POST,
                 "dev-post",
                 allMembers
@@ -55,8 +55,8 @@ public class DevDataSeeder implements CommandLineRunner {
         for (int tdp = 1; tdp <= 5; tdp++) {
             seedNotification(
                     NotificationType.MEETING_SCHEDULE,
-                    "Lich hop TDP " + tdp,
-                    "Chi doan TDP " + tdp + " co lich sinh hoat mau.",
+                    "Lịch họp TDP " + tdp,
+                    "Chi đoàn TDP " + tdp + " có lịch sinh hoạt mẫu.",
                     ReferenceType.EVENT,
                     "dev-tdp-" + tdp + "-meeting",
                     tdpMemberIds(tdp)

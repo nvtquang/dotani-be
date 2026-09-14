@@ -56,6 +56,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET is required}
       AUTH_INTERNAL_SECRET: ${AUTH_INTERNAL_SECRET:?AUTH_INTERNAL_SECRET is required}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       MEMBER_SERVICE_URL: http://member-service:8082
       DEV_WARD_SECRETARY_USERNAME: ${DEV_WARD_SECRETARY_USERNAME:-ward.secretary}
       DEV_WARD_SECRETARY_EMAIL: ${DEV_WARD_SECRETARY_EMAIL:-ward.secretary@hcmcyu.local}
@@ -269,6 +270,7 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
         VITE_CHAT_WS_URL: ${VITE_CHAT_WS_URL:-ws://localhost:8080/ws/chat}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     container_name: hcmcyu-frontend
     restart: unless-stopped
     depends_on:

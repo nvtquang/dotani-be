@@ -34,9 +34,9 @@ public class DevDataSeeder implements CommandLineRunner {
         }
 
         Event wardMeeting = seedEvent(
-                "Hop BCH Doan phuong Thuong Cat",
+                "Họp BCH Đoàn phường Thượng Cát",
                 EventType.MEETING,
-                "Hoi truong UBND phuong",
+                "Hội trường UBND phường",
                 "ward-thuong-cat",
                 "user-ward-secretary",
                 3,
@@ -47,18 +47,18 @@ public class DevDataSeeder implements CommandLineRunner {
 
         for (int tdp = 1; tdp <= 5; tdp++) {
             Event activity = seedEvent(
-                    "Hoat dong tinh nguyen TDP " + tdp,
+                    "Hoạt động tình nguyện TDP " + tdp,
                     EventType.ACTIVITY,
-                    "Nha van hoa TDP " + tdp,
+                    "Nhà văn hóa TDP " + tdp,
                     "tdp-" + tdp,
                     "user-tdp-" + tdp + "-secretary",
                     tdp + 5,
                     30
             );
             Event congress = seedEvent(
-                    "Dai hoi chi doan TDP " + tdp,
+                    "Đại hội chi đoàn TDP " + tdp,
                     EventType.CONGRESS,
-                    "Nha van hoa TDP " + tdp,
+                    "Nhà văn hóa TDP " + tdp,
                     "tdp-" + tdp,
                     "user-tdp-" + tdp + "-secretary",
                     tdp + 20,
@@ -90,7 +90,7 @@ public class DevDataSeeder implements CommandLineRunner {
         LocalDateTime start = LocalDateTime.now().plusDays(daysFromNow).withNano(0);
         Event event = new Event();
         event.setTitle(title);
-        event.setDescription(title + " - du lieu mau phuc vu development.");
+        event.setDescription(title + " - dữ liệu mẫu phục vụ môi trường phát triển.");
         event.setType(type);
         event.setLocation(location);
         event.setStartTime(start);

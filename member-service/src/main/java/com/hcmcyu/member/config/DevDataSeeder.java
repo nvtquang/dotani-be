@@ -34,7 +34,7 @@ public class DevDataSeeder implements CommandLineRunner {
     public void run(String... args) {
         OrganizationUnit ward = seedOrganization(
                 WARD_ID,
-                "Phuong Thuong Cat",
+                "Phường Thượng Cát",
                 "THUONG_CAT",
                 OrganizationUnitType.WARD,
                 null
@@ -42,7 +42,7 @@ public class DevDataSeeder implements CommandLineRunner {
         for (int tdp = 1; tdp <= 5; tdp++) {
             OrganizationUnit branch = seedOrganization(
                     "tdp-" + tdp,
-                    "Chi doan TDP " + tdp,
+                    "Chi đoàn TDP " + tdp,
                     "TDP_" + tdp,
                     OrganizationUnitType.YOUTH_UNION_BRANCH,
                     ward
@@ -75,7 +75,7 @@ public class DevDataSeeder implements CommandLineRunner {
         seedMember(
                 "admin-member",
                 "user-admin",
-                "Quan Tri Vien He Thong",
+                "Quản trị viên hệ thống",
                 "admin@hcmcyu.local",
                 defaultBranch,
                 MemberRole.WARD_SECRETARY,
@@ -85,7 +85,7 @@ public class DevDataSeeder implements CommandLineRunner {
         seedMember(
                 "ward-secretary-member",
                 "user-ward-secretary",
-                "Nguyen Van Bi Thu Phuong",
+                "Nguyễn Văn Bí Thư Phường",
                 "ward.secretary@hcmcyu.local",
                 defaultBranch,
                 MemberRole.WARD_SECRETARY,
@@ -95,7 +95,7 @@ public class DevDataSeeder implements CommandLineRunner {
         seedMember(
                 "ward-deputy-member",
                 "user-ward-deputy",
-                "Tran Thi Pho Bi Thu Phuong",
+                "Trần Thị Phó Bí Thư Phường",
                 "ward.deputy@hcmcyu.local",
                 defaultBranch,
                 MemberRole.WARD_DEPUTY_SECRETARY,
@@ -108,7 +108,7 @@ public class DevDataSeeder implements CommandLineRunner {
         seedMember(
                 "tdp-" + tdp + "-secretary-member",
                 "user-tdp-" + tdp + "-secretary",
-                "Bi Thu TDP " + tdp,
+                "Bí thư TDP " + tdp,
                 "tdp" + tdp + ".secretary@hcmcyu.local",
                 branch,
                 MemberRole.TDP_SECRETARY,
@@ -118,7 +118,7 @@ public class DevDataSeeder implements CommandLineRunner {
         seedMember(
                 "tdp-" + tdp + "-deputy-member",
                 "user-tdp-" + tdp + "-deputy",
-                "Pho Bi Thu TDP " + tdp,
+                "Phó bí thư TDP " + tdp,
                 "tdp" + tdp + ".deputy@hcmcyu.local",
                 branch,
                 MemberRole.TDP_DEPUTY_SECRETARY,
@@ -129,7 +129,7 @@ public class DevDataSeeder implements CommandLineRunner {
             seedMember(
                     "tdp-" + tdp + "-member-" + member,
                     "user-tdp-" + tdp + "-member-" + member,
-                    "Doan Vien TDP " + tdp + "." + member,
+                    "Đoàn viên TDP " + tdp + "." + member,
                     "tdp" + tdp + ".member" + member + "@hcmcyu.local",
                     branch,
                     MemberRole.MEMBER,
@@ -160,13 +160,13 @@ public class DevDataSeeder implements CommandLineRunner {
         member.setGender(gender);
         member.setPhone("0900%06d".formatted(sampleNumber));
         member.setEmail(email);
-        member.setAddress("Phuong Thuong Cat, Bac Tu Liem, Ha Noi");
+        member.setAddress("Phường Thượng Cát, Bắc Từ Liêm, Hà Nội");
         member.setAvatarUrl("/uploads/avatars/dev-avatar-" + sampleNumber + ".png");
         member.setYouthUnionJoinDate(LocalDate.of(2022, 3, 26));
         member.setMemberStatus(MemberStatus.ACTIVE);
         member.setMemberRole(role);
         member.setOrganization(organization);
-        member.setBankName("Demo Bank");
+        member.setBankName("Ngân hàng mẫu");
         member.setBankCode("DEMO");
         member.setAccountNumber("DEMO%08d".formatted(sampleNumber));
         member.setAccountHolderName(fullName.toUpperCase());

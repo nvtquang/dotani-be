@@ -1,6 +1,7 @@
 package com.hcmcyu.member.service;
 
 import com.hcmcyu.member.dto.InternalMemberRegistrationRequest;
+import com.hcmcyu.member.dto.InternalMemberProfileCompletionRequest;
 import com.hcmcyu.member.dto.MemberResponse;
 import com.hcmcyu.member.entity.Member;
 import com.hcmcyu.member.entity.MemberRole;
@@ -67,9 +68,30 @@ public class InternalMemberRegistrationService {
         member.setFullName(request.fullName().trim());
         member.setEmail(request.email() == null ? null : request.email().trim().toLowerCase());
         member.setPhone(request.phone() == null || request.phone().isBlank() ? null : request.phone().trim());
+        member.setDateOfBirth(request.dateOfBirth());
         member.setOrganization(organization);
         member.setMemberRole(MemberRole.MEMBER);
         member.setMemberStatus(MemberStatus.ACTIVE);
+
+        return memberMapper.toResponse(memberRepository.save(member));
+    }
+
+    @Transactional
+    public MemberResponse completeMemberProfile(
+            String memberId,
+            InternalMemberProfileCompletionRequest request,
+            String providedSecret
+    ) {
+        if (providedSecret == null || !providedSecret.equals(internalSecret)) {
+            throw new MemberServiceException(HttpStatus.UNAUTHORIZED, "INVALID_INTERNAL_SECRET", "Invalid internal secret");
+        }
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberServiceException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "Member not found"));
+
+        member.setFullName(request.fullName().trim());
+        member.setPhone(request.phone().trim());
+        member.setDateOfBirth(request.dateOfBirth());
 
         return memberMapper.toResponse(memberRepository.save(member));
     }

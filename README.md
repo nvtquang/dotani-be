@@ -75,6 +75,8 @@ AUTH_INTERNAL_SECRET=<random-internal-secret>
 AUDIT_INTERNAL_SECRET=<random-internal-secret>
 NOTIFICATION_INTERNAL_SECRET=<random-internal-secret>
 DEV_WARD_SECRETARY_PASSWORD=Demo@12345
+GOOGLE_CLIENT_ID=<google-oauth-client-id.apps.googleusercontent.com>
+VITE_GOOGLE_CLIENT_ID=<google-oauth-client-id.apps.googleusercontent.com>
 ```
 
 Neu may dang co MySQL/XAMPP dung port `3306`, doi trong `.env`:
@@ -102,6 +104,29 @@ docker compose ps
 ```
 
 Tat ca container nen o trang thai `healthy`, frontend co the mat vai giay dau de healthcheck sang `healthy`.
+
+## Dang nhap bang Google
+
+Google login dung Google Identity Services o frontend va `id_token` duoc auth-service verify voi Google.
+
+Can tao OAuth Client ID trong Google Cloud Console:
+
+- Application type: `Web application`
+- Authorized JavaScript origins khi chay Docker/local: `http://localhost:5173`
+- Neu chay frontend dev Vite truc tiep, cung dung origin `http://localhost:5173`
+
+Sau do dien cung mot Client ID vao `.env`:
+
+```env
+GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+```
+
+Luu y: `VITE_GOOGLE_CLIENT_ID` duoc bake vao frontend luc build, nen sau khi doi bien nay can chay lai:
+
+```powershell
+docker compose up --build -d frontend auth-service
+```
 
 ## URL su dung
 

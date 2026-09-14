@@ -26,16 +26,16 @@ public class DevDataSeeder implements CommandLineRunner {
         }
 
         seedPost(
-                "Thong bao lich sinh hoat Doan phuong",
-                "Lich sinh hoat va trien khai cong viec thang nay.",
+                "Thông báo lịch sinh hoạt Đoàn phường",
+                "Lịch sinh hoạt và triển khai công việc tháng này.",
                 PostType.ANNOUNCEMENT,
                 "ward-thuong-cat",
                 "ward-secretary-member",
                 "dev-ward-announcement.png"
         );
         seedPost(
-                "Tin moi tu Doan phuong Thuong Cat",
-                "Cap nhat cac hoat dong noi bat cua Doan phuong.",
+                "Tin mới từ Đoàn phường Thượng Cát",
+                "Cập nhật các hoạt động nổi bật của Đoàn phường.",
                 PostType.NEWS,
                 "ward-thuong-cat",
                 "ward-deputy-member",
@@ -44,16 +44,16 @@ public class DevDataSeeder implements CommandLineRunner {
 
         for (int tdp = 1; tdp <= 5; tdp++) {
             seedPost(
-                    "Bao cao hoat dong TDP " + tdp,
-                    "Bao cao anh hoat dong tinh nguyen cua chi doan TDP " + tdp + ".",
+                    "Báo cáo hoạt động TDP " + tdp,
+                    "Báo cáo ảnh hoạt động tình nguyện của chi đoàn TDP " + tdp + ".",
                     PostType.ACTIVITY_REPORT,
                     "tdp-" + tdp,
                     "tdp-" + tdp + "-secretary-member",
                     "dev-tdp-" + tdp + "-report.png"
             );
             seedPost(
-                    "Thong tin sinh hoat TDP " + tdp,
-                    "Noi dung sinh hoat chi doan TDP " + tdp + ".",
+                    "Thông tin sinh hoạt TDP " + tdp,
+                    "Nội dung sinh hoạt chi đoàn TDP " + tdp + ".",
                     PostType.OTHER,
                     "tdp-" + tdp,
                     "tdp-" + tdp + "-deputy-member",

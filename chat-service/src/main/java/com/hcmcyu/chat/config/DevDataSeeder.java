@@ -33,7 +33,7 @@ public class DevDataSeeder implements CommandLineRunner {
 
         Conversation wardGroup = seedConversation(
                 ConversationType.GROUP,
-                "Nhom Doan phuong Thuong Cat",
+                "Nhóm Đoàn phường Thượng Cát",
                 "ward-secretary-member",
                 "ward-secretary-member",
                 "ward-deputy-member",
@@ -43,12 +43,12 @@ public class DevDataSeeder implements CommandLineRunner {
                 "tdp-4-secretary-member",
                 "tdp-5-secretary-member"
         );
-        seedMessage(wardGroup, "ward-secretary-member", "Chao mung cac dong chi den voi nhom chat development.");
-        seedMessage(wardGroup, "tdp-1-secretary-member", "TDP 1 da nhan thong tin.");
+        seedMessage(wardGroup, "ward-secretary-member", "Chào mừng các đồng chí đến với nhóm chat development.");
+        seedMessage(wardGroup, "tdp-1-secretary-member", "TDP 1 đã nhận thông tin.");
 
         Conversation tdp1Group = seedConversation(
                 ConversationType.GROUP,
-                "Chi doan TDP 1",
+                "Chi đoàn TDP 1",
                 "tdp-1-secretary-member",
                 "tdp-1-secretary-member",
                 "tdp-1-deputy-member",
@@ -58,8 +58,8 @@ public class DevDataSeeder implements CommandLineRunner {
                 "tdp-1-member-4",
                 "tdp-1-member-5"
         );
-        seedMessage(tdp1Group, "tdp-1-secretary-member", "Moi moi nguoi theo doi lich sinh hoat TDP 1.");
-        seedMessage(tdp1Group, "tdp-1-member-1", "Em da nhan duoc thong bao.");
+        seedMessage(tdp1Group, "tdp-1-secretary-member", "Mời mọi người theo dõi lịch sinh hoạt TDP 1.");
+        seedMessage(tdp1Group, "tdp-1-member-1", "Em đã nhận được thông báo.");
 
         Conversation direct = seedConversation(
                 ConversationType.DIRECT,
@@ -68,8 +68,8 @@ public class DevDataSeeder implements CommandLineRunner {
                 "tdp-1-secretary-member",
                 "tdp-1-member-1"
         );
-        seedMessage(direct, "tdp-1-secretary-member", "Can ho tro thong tin ho so thi bao lai nhe.");
-        seedMessage(direct, "tdp-1-member-1", "Em cam on anh chi.");
+        seedMessage(direct, "tdp-1-secretary-member", "Cần hỗ trợ thông tin hồ sơ thì báo lại nhé.");
+        seedMessage(direct, "tdp-1-member-1", "Em cảm ơn anh chị.");
     }
 
     private Conversation seedConversation(

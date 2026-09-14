@@ -1,6 +1,7 @@
 package com.hcmcyu.auth.controller;
 
 import com.hcmcyu.auth.dto.AuthResponse;
+import com.hcmcyu.auth.dto.GoogleLoginRequest;
 import com.hcmcyu.auth.dto.LoginRequest;
 import com.hcmcyu.auth.dto.RefreshRequest;
 import com.hcmcyu.auth.dto.RegisterRequest;
@@ -49,6 +50,12 @@ public class AuthController {
     @Operation(summary = "Login", description = "Public endpoint. Returns accessToken and refreshToken when username/email and password are valid.")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/google")
+    @Operation(summary = "Login with Google", description = "Public endpoint. Verifies Google ID token on the backend, creates or logs in a MEMBER account, and creates the member profile with required personal information.")
+    public AuthResponse loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        return authService.loginWithGoogle(request);
     }
 
     @PostMapping("/refresh")

@@ -12,9 +12,13 @@ import com.hcmcyu.auth.entity.Role;
 import com.hcmcyu.auth.entity.UserAccount;
 import com.hcmcyu.auth.repository.RefreshTokenRepository;
 import com.hcmcyu.auth.repository.UserAccountRepository;
+import com.hcmcyu.auth.dto.GoogleUserInfo;
+import com.hcmcyu.auth.dto.GoogleLoginRequest;
+import com.hcmcyu.auth.dto.RegisterRequest;
 import com.hcmcyu.auth.service.JwtService;
 import com.hcmcyu.auth.service.MemberRegistrationClient;
 import com.hcmcyu.auth.dto.MemberRegistrationResponse;
+import com.hcmcyu.auth.service.GoogleTokenVerifier;
 import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,11 +72,14 @@ class AuthServiceIntegrationTest {
     @MockBean
     private MemberRegistrationClient memberRegistrationClient;
 
+    @MockBean
+    private GoogleTokenVerifier googleTokenVerifier;
+
     @BeforeEach
     void cleanDatabase() {
         refreshTokenRepository.deleteAll();
         userAccountRepository.deleteAll();
-        when(memberRegistrationClient.createMemberProfile(any(), any()))
+        when(memberRegistrationClient.createMemberProfile(any(UserAccount.class), any(RegisterRequest.class)))
                 .thenReturn(new MemberRegistrationResponse(
                         "member-registered",
                         "user-registered",
@@ -81,6 +88,17 @@ class AuthServiceIntegrationTest {
                         "tdp-1",
                         "Chi đoàn TDP 1"
                 ));
+        when(memberRegistrationClient.createMemberProfile(any(UserAccount.class), any(GoogleLoginRequest.class)))
+                .thenReturn(new MemberRegistrationResponse(
+                        "member-registered",
+                        "user-registered",
+                        "Registered Member",
+                        "member01@example.com",
+                        "tdp-1",
+                        "Chi đoàn TDP 1"
+                ));
+        when(googleTokenVerifier.verify("valid-google-token"))
+                .thenReturn(new GoogleUserInfo("google-sub-1", "google.member@example.com", "Google Member"));
     }
 
     @Test
@@ -196,6 +214,32 @@ class AuthServiceIntegrationTest {
                         ))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+    }
+
+    @Test
+    void googleLoginCreatesMemberAccountAndProfile() throws Exception {
+        mockMvc.perform(post("/api/auth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of(
+                                "idToken", "valid-google-token",
+                                "fullName", "Nguyễn Văn Google",
+                                "phone", "0912345678",
+                                "dateOfBirth", "2003-05-20",
+                                "organizationId", "tdp-1",
+                                "role", "WARD_SECRETARY"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty())
+                .andExpect(jsonPath("$.user.email").value("google.member@example.com"))
+                .andExpect(jsonPath("$.user.role").value("MEMBER"))
+                .andExpect(jsonPath("$.user.memberId").value("member-registered"))
+                .andExpect(jsonPath("$.user.tdpId").value("tdp-1"));
+
+        UserAccount user = userAccountRepository.findByEmail("google.member@example.com").orElseThrow();
+        assertThat(user.getRole()).isEqualTo(Role.MEMBER);
+        assertThat(user.getProviderSubject()).isEqualTo("google-sub-1");
+        assertThat(user.getMemberId()).isEqualTo("member-registered");
     }
 
     @Test
