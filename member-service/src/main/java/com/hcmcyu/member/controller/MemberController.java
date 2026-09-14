@@ -17,10 +17,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -183,6 +188,20 @@ public class MemberController {
             @AuthenticationPrincipal CurrentUser currentUser
     ) {
         return memberService.findBankingByMemberId(memberId, currentUser);
+    }
+
+    @GetMapping("/{memberId}/banking/qr-image")
+    @Operation(summary = "Get scoped QR Banking image", description = "Returns the QR Banking image only after member/profile scope authorization succeeds.")
+    public ResponseEntity<Resource> getBankQrImage(
+            @PathVariable("memberId") String memberId,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        Resource resource = memberService.loadBankQrImage(memberId, currentUser);
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
     }
 
     @DeleteMapping("/{id}")

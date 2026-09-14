@@ -21,6 +21,7 @@ import com.hcmcyu.member.repository.MemberSpecifications;
 import com.hcmcyu.member.repository.OrganizationUnitRepository;
 import com.hcmcyu.member.security.CurrentUser;
 import com.hcmcyu.member.security.Role;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -119,6 +120,13 @@ public class MemberService {
         Member member = getMember(memberId);
         memberScopeService.requireRead(currentUser, member);
         return toBankingResponse(member);
+    }
+
+    @Transactional(readOnly = true)
+    public Resource loadBankQrImage(String memberId, CurrentUser currentUser) {
+        Member member = getMember(memberId);
+        memberScopeService.requireRead(currentUser, member);
+        return storageService.loadBankQr(member.getBankQrImageUrl());
     }
 
     @Transactional
@@ -359,7 +367,7 @@ public class MemberService {
                 member.getBankCode(),
                 member.getAccountNumber(),
                 member.getAccountHolderName(),
-                member.getBankQrImageUrl()
+                member.getBankQrImageUrl() == null ? null : "/api/members/" + member.getId() + "/banking/qr-image"
         );
     }
 

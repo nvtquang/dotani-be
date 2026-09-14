@@ -98,7 +98,7 @@ class MemberBankingIntegrationTest {
         mockMvc.perform(withMemberA(multipart("/api/members/me/banking/qr").file(qr)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.memberId").value(memberA.getId()))
-                .andExpect(jsonPath("$.bankQrImageUrl").value(org.hamcrest.Matchers.startsWith("/uploads/bank-qr/")));
+                .andExpect(jsonPath("$.bankQrImageUrl").value("/api/members/" + memberA.getId() + "/banking/qr-image"));
 
         Member updated = memberRepository.findById(memberA.getId()).orElseThrow();
         assertThat(updated.getBankQrImageUrl()).startsWith("/uploads/bank-qr/");
@@ -107,6 +107,9 @@ class MemberBankingIntegrationTest {
         assertThat(Files.exists(BANK_QR_STORAGE_PATH.resolve(storedFilename))).isTrue();
 
         mockMvc.perform(get(updated.getBankQrImageUrl()))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(withMemberA(get("/api/members/{memberId}/banking/qr-image", memberA.getId())))
                 .andExpect(status().isOk())
                 .andExpect(content().bytes(new byte[] {1, 2, 3, 4}));
     }
@@ -167,7 +170,23 @@ class MemberBankingIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.memberId").value(memberB.getId()))
                 .andExpect(jsonPath("$.accountNumber").value("555666777"))
-                .andExpect(jsonPath("$.bankQrImageUrl").value("/uploads/bank-qr/existing.png"));
+                .andExpect(jsonPath("$.bankQrImageUrl").value("/api/members/" + memberB.getId() + "/banking/qr-image"));
+    }
+
+    @Test
+    void bankQrImageEndpointRequiresBankingScope() throws Exception {
+        Files.createDirectories(BANK_QR_STORAGE_PATH);
+        Files.write(BANK_QR_STORAGE_PATH.resolve("existing.png"), new byte[] {5, 6, 7});
+        memberC.setBankQrImageUrl("/uploads/bank-qr/existing.png");
+        memberRepository.save(memberC);
+
+        mockMvc.perform(withTdpSecretary(get("/api/members/{memberId}/banking/qr-image", memberC.getId()), tdp1.getId()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("OUT_OF_SCOPE"));
+
+        mockMvc.perform(withWardSecretary(get("/api/members/{memberId}/banking/qr-image", memberC.getId())))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(new byte[] {5, 6, 7}));
     }
 
     @Test

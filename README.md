@@ -18,18 +18,13 @@ D:\Java\HCMCYU-frontend   # Frontend React/Vite, duoc compose build tu ../HCMCYU
 
 ## Service va port
 
-| Service | Port mac dinh | Health |
+| Service | Port Docker dev | Health |
 | --- | ---: | --- |
 | frontend | 5173 | `http://localhost:5173/health` |
 | api-gateway | 8080 | `http://localhost:8080/api/health` |
-| auth-service | 8081 | `http://localhost:8081/api/health` |
-| member-service | 8082 | `http://localhost:8082/api/health` |
-| event-service | 8083 | `http://localhost:8083/api/health` |
-| content-service | 8084 | `http://localhost:8084/api/health` |
-| chat-service | 8085 | `http://localhost:8085/api/health` |
-| notification-service | 8086 | `http://localhost:8086/api/health` |
-| audit-service | 8087 | `http://localhost:8087/api/health` |
 | mysql | 3306 | Docker healthcheck |
+
+Trong Docker Compose, cac microservice noi bo khong publish port ra host. Frontend va client chi goi API qua gateway de tranh bypass JWT/identity headers.
 
 API frontend nen goi qua gateway:
 
@@ -69,16 +64,16 @@ Mo `.env` va thay cac gia tri `change-me`:
 notepad .env
 ```
 
-Gia tri dev co the dung tren may local:
+Vi du format `.env` cho may local:
 
 ```env
-MYSQL_ROOT_PASSWORD=123456
+MYSQL_ROOT_PASSWORD=<local-root-password>
 DB_USERNAME=root
-DB_PASSWORD=123456
-AUTH_JWT_SECRET=HCMCYU-JWT-SECRET-2026-VERY-STRONG-KEY-123456789
-AUTH_INTERNAL_SECRET=HCMCYU-AUTH-INTERNAL-SECRET-2026
-AUDIT_INTERNAL_SECRET=HCMCYU-AUDIT-INTERNAL-SECRET-2026
-NOTIFICATION_INTERNAL_SECRET=HCMCYU-NOTIFICATION-INTERNAL-SECRET-2026
+DB_PASSWORD=<local-db-password>
+AUTH_JWT_SECRET=<at-least-32-characters-random-secret>
+AUTH_INTERNAL_SECRET=<random-internal-secret>
+AUDIT_INTERNAL_SECRET=<random-internal-secret>
+NOTIFICATION_INTERNAL_SECRET=<random-internal-secret>
 DEV_WARD_SECRETARY_PASSWORD=Demo@12345
 ```
 
@@ -113,27 +108,18 @@ Tat ca container nen o trang thai `healthy`, frontend co the mat vai giay dau de
 - Frontend: `http://localhost:5173`
 - API Gateway: `http://localhost:8080`
 - Gateway health: `http://localhost:8080/api/health`
-- Swagger UI:
-  - `http://localhost:8081/swagger-ui/index.html`
-  - `http://localhost:8082/swagger-ui/index.html`
-  - `http://localhost:8083/swagger-ui/index.html`
-  - `http://localhost:8084/swagger-ui/index.html`
-  - `http://localhost:8085/swagger-ui/index.html`
-  - `http://localhost:8086/swagger-ui/index.html`
-  - `http://localhost:8087/swagger-ui/index.html`
 
 ## Lenh kiem tra nhanh
 
 ```powershell
 curl.exe -fsS http://localhost:8080/api/health
 curl.exe -fsS http://localhost:5173/health
-curl.exe -fsS http://localhost:8081/api/health
-curl.exe -fsS http://localhost:8082/api/health
-curl.exe -fsS http://localhost:8083/api/health
-curl.exe -fsS http://localhost:8084/api/health
-curl.exe -fsS http://localhost:8085/api/health
-curl.exe -fsS http://localhost:8086/api/health
-curl.exe -fsS http://localhost:8087/api/health
+curl.exe -fsS http://localhost:8080/api/auth/health
+curl.exe -fsS http://localhost:8080/api/members/health
+curl.exe -fsS http://localhost:8080/api/events/health
+curl.exe -fsS http://localhost:8080/api/posts/health
+curl.exe -fsS http://localhost:8080/api/chat/health
+curl.exe -fsS http://localhost:8080/api/notifications/health
 ```
 
 ## Tai khoan demo development

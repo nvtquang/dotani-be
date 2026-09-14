@@ -159,10 +159,6 @@ class GatewayRoutingTest {
                 .setResponseCode(200)
                 .setHeader("Content-Type", "image/png")
                 .setBody("avatar"));
-        MEMBER_SERVICE.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "image/png")
-                .setBody("bank-qr"));
 
         WebTestClient client = WebTestClient.bindToServer()
                 .baseUrl("http://localhost:" + port)
@@ -177,11 +173,9 @@ class GatewayRoutingTest {
         client.get()
                 .uri("/uploads/bank-qr/demo.png")
                 .exchange()
-                .expectStatus().isOk()
-                .expectBody(String.class).isEqualTo("bank-qr");
+                .expectStatus().isNotFound();
 
         assertThat(MEMBER_SERVICE.takeRequest().getPath()).isEqualTo("/uploads/avatars/demo.png");
-        assertThat(MEMBER_SERVICE.takeRequest().getPath()).isEqualTo("/uploads/bank-qr/demo.png");
     }
 
     @Test

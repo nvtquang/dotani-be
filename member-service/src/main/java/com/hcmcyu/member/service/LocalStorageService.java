@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -64,6 +66,38 @@ public class LocalStorageService implements StorageService {
     @Override
     public String storeBankQr(MultipartFile file) {
         return store(file, bankQrBucket);
+    }
+
+    @Override
+    public Resource loadBankQr(String storedUrl) {
+        if (storedUrl == null || !storedUrl.startsWith(bankQrBucket.publicUrlPrefix() + "/")) {
+            throw new MemberServiceException(
+                    HttpStatus.NOT_FOUND,
+                    "BANK_QR_NOT_FOUND",
+                    "Banking QR image not found"
+            );
+        }
+
+        String filename = storedUrl.substring(bankQrBucket.publicUrlPrefix().length() + 1);
+        Path target = bankQrBucket.storagePath().resolve(filename).normalize();
+        ensureInsideStorage(target, bankQrBucket);
+        try {
+            Resource resource = new UrlResource(target.toUri());
+            if (!resource.exists() || !resource.isReadable()) {
+                throw new MemberServiceException(
+                        HttpStatus.NOT_FOUND,
+                        "BANK_QR_NOT_FOUND",
+                        "Banking QR image not found"
+                );
+            }
+            return resource;
+        } catch (IOException exception) {
+            throw new MemberServiceException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "BANK_QR_READ_FAILED",
+                    "Failed to read QR Banking image"
+            );
+        }
     }
 
     private String store(MultipartFile file, StorageBucket bucket) {
