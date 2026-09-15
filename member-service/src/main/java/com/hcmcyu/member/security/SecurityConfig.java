@@ -39,7 +39,8 @@ public class SecurityConfig {
                                 "/internal/members/register",
                                 "/internal/members/display-names",
                                 "/uploads/avatars/**",
-                                "/actuator/**",
+                                "/actuator/health",
+                                "/actuator/health/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**"

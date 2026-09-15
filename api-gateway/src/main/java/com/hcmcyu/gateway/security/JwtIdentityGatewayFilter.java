@@ -81,7 +81,8 @@ public class JwtIdentityGatewayFilter implements GlobalFilter, Ordered {
 
     private boolean isPublicPath(String path) {
         return path.endsWith("/health")
-                || path.startsWith("/actuator")
+                || path.equals("/actuator/health")
+                || path.startsWith("/actuator/health/")
                 || path.startsWith("/v3/api-docs")
                 || path.equals("/swagger-ui.html")
                 || path.startsWith("/swagger-ui")
