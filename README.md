@@ -1,12 +1,12 @@
-# HCMCYU Backend
+# DOTANI Backend
 
 Backend cho hệ thống website quản lý đoàn viên Đoàn TNCS Hồ Chí Minh Phường Thượng Cát.
 
-Frontend repository: https://github.com/nvtquang/hcmcyu-frontend
+Frontend repository: https://github.com/nvtquang/dotani-fe
 
 ## Mô tả
 
-HCMCYU quản lý hồ sơ đoàn viên theo tổ dân phố, đăng nhập/phân quyền, sự kiện, bài viết/báo cáo hoạt động, chat realtime, thông báo và dashboard.
+DOTANI quản lý hồ sơ đoàn viên theo tổ dân phố, đăng nhập/phân quyền, sự kiện, bài viết/báo cáo hoạt động, chat realtime, thông báo và dashboard.
 
 ## Stack
 
@@ -58,14 +58,13 @@ Yêu cầu:
 
 - Docker Desktop
 - Git
-- Frontend đặt cạnh backend tại `D:\Java\HCMCYU-frontend` nếu chạy bằng Docker Compose mặc định
 
 Clone backend và frontend:
 
 ```powershell
 cd D:\Java
-git clone <backend-git-url> HCMCYU
-git clone https://github.com/nvtquang/hcmcyu-frontend.git HCMCYU-frontend
+git clone https://github.com/nvtquang/dotani-be.git 
+git clone https://github.com/nvtquang/dotani-fe.git 
 ```
 
 Tạo file môi trường:
