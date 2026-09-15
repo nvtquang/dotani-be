@@ -19,6 +19,7 @@ public class ChatMapper {
                 conversation.getId(),
                 conversation.getType(),
                 conversation.getTitle(),
+                conversation.getAvatarUrl(),
                 conversation.getCreatedBy(),
                 conversation.getMembers().stream()
                         .map(member -> member.getMemberId())
@@ -41,6 +42,11 @@ public class ChatMapper {
                 message.getSenderId(),
                 senderName,
                 message.getContent(),
+                message.getAttachmentUrl(),
+                message.getAttachmentName(),
+                message.getAttachmentContentType(),
+                message.getAttachmentSize(),
+                message.getAttachmentKind(),
                 message.getCreatedAt()
         );
     }

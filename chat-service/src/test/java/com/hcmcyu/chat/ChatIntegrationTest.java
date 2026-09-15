@@ -3,6 +3,7 @@ package com.hcmcyu.chat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -45,6 +46,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
@@ -159,6 +161,48 @@ class ChatIntegrationTest {
 
         assertThat(conversationMemberRepository.existsByConversation_IdAndMemberId(groupConversation.getId(), "member-4"))
                 .isFalse();
+    }
+
+    @Test
+    void memberCanUploadChatAttachment() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "bao-cao.pdf",
+                MediaType.APPLICATION_PDF_VALUE,
+                "pdf-content".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/chat/conversations/{id}/messages/attachments", groupConversation.getId())
+                        .file(file)
+                        .header(HttpHeaders.AUTHORIZATION, bearer("member-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.senderId").value("member-1"))
+                .andExpect(jsonPath("$.attachmentKind").value("FILE"))
+                .andExpect(jsonPath("$.attachmentName").value("bao-cao.pdf"))
+                .andExpect(jsonPath("$.attachmentUrl").value(org.hamcrest.Matchers.startsWith("/uploads/chat/attachments/")));
+
+        assertThat(messageRepository.findAll()).hasSize(1);
+        assertThat(messageRepository.findAll().getFirst().getAttachmentUrl()).startsWith("/uploads/chat/attachments/");
+    }
+
+    @Test
+    void groupMemberCanUpdateGroupAvatar() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "nhom.png",
+                MediaType.IMAGE_PNG_VALUE,
+                new byte[] {1, 2, 3, 4}
+        );
+
+        mockMvc.perform(multipart("/api/chat/conversations/{id}/avatar", groupConversation.getId())
+                        .file(file)
+                        .with(request -> {
+                            request.setMethod("PATCH");
+                            return request;
+                        })
+                        .header(HttpHeaders.AUTHORIZATION, bearer("member-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.avatarUrl").value(org.hamcrest.Matchers.startsWith("/uploads/chat/group-avatars/")));
     }
 
     @Test

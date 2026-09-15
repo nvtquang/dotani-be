@@ -1,5 +1,6 @@
 package com.hcmcyu.chat.dto;
 
+import com.hcmcyu.chat.entity.AttachmentKind;
 import java.time.LocalDateTime;
 
 public record MessageResponse(
@@ -8,6 +9,11 @@ public record MessageResponse(
         String senderId,
         String senderName,
         String content,
+        String attachmentUrl,
+        String attachmentName,
+        String attachmentContentType,
+        Long attachmentSize,
+        AttachmentKind attachmentKind,
         LocalDateTime createdAt
 ) {
 }

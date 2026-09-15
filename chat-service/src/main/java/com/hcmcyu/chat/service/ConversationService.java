@@ -28,19 +28,22 @@ public class ConversationService {
     private final ChatAuthorizationService authorizationService;
     private final ChatMapper chatMapper;
     private final MemberDirectoryClient memberDirectoryClient;
+    private final ChatStorageService storageService;
 
     public ConversationService(
             ConversationRepository conversationRepository,
             ConversationMemberRepository conversationMemberRepository,
             ChatAuthorizationService authorizationService,
             ChatMapper chatMapper,
-            MemberDirectoryClient memberDirectoryClient
+            MemberDirectoryClient memberDirectoryClient,
+            ChatStorageService storageService
     ) {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.authorizationService = authorizationService;
         this.chatMapper = chatMapper;
         this.memberDirectoryClient = memberDirectoryClient;
+        this.storageService = storageService;
     }
 
     @Transactional
@@ -121,6 +124,25 @@ public class ConversationService {
                         "Conversation member not found"
                 ));
         conversation.removeMember(member);
+    }
+
+    @Transactional
+    public ConversationResponse updateGroupAvatar(
+            String conversationId,
+            org.springframework.web.multipart.MultipartFile file,
+            CurrentUser currentUser
+    ) {
+        authorizationService.requireConversationMember(conversationId, currentUser);
+        Conversation conversation = getConversationWithMembers(conversationId);
+        if (conversation.getType() != ConversationType.GROUP) {
+            throw new ChatServiceException(
+                    HttpStatus.BAD_REQUEST,
+                    "DIRECT_CONVERSATION_IMMUTABLE",
+                    "Cannot update avatar for a direct conversation"
+            );
+        }
+        conversation.setAvatarUrl(storageService.storeGroupAvatar(file));
+        return toResponse(conversationRepository.saveAndFlush(conversation));
     }
 
     private Conversation getConversationWithMembers(String id) {

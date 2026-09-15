@@ -91,6 +91,10 @@ spring:
           uri: ${CHAT_SERVICE_URL:http://localhost:8085}
           predicates:
             - Path=/api/chat/**
+        - id: chat-service-assets
+          uri: ${CHAT_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/uploads/chat/**
         - id: chat-service-websocket-root
           uri: ${CHAT_SERVICE_WS_URL:ws://localhost:8085}
           predicates:

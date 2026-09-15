@@ -182,11 +182,15 @@ services:
       JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET is required}
       MEMBER_SERVICE_URL: http://member-service:8082
       AUTH_INTERNAL_SECRET: ${AUTH_INTERNAL_SECRET:?AUTH_INTERNAL_SECRET is required}
+      STORAGE_CHAT_ATTACHMENT_PATH: /app/storage/chat-attachments
+      STORAGE_CHAT_GROUP_AVATAR_PATH: /app/storage/chat-group-avatars
     depends_on:
       mysql:
         condition: service_healthy
       member-service:
         condition: service_healthy
+    volumes:
+      - hcmcyu_chat_storage:/app/storage
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8085/api/health >/dev/null || exit 1"]
       interval: 15s
@@ -289,3 +293,4 @@ volumes:
   hcmcyu_mysql_data:
   hcmcyu_member_storage:
   hcmcyu_content_storage:
+  hcmcyu_chat_storage:

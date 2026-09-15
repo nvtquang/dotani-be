@@ -17,15 +17,19 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/chat/conversations")
@@ -42,10 +46,16 @@ public class ConversationController {
 
     private final ConversationService conversationService;
     private final MessageService messageService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public ConversationController(ConversationService conversationService, MessageService messageService) {
+    public ConversationController(
+            ConversationService conversationService,
+            MessageService messageService,
+            SimpMessagingTemplate messagingTemplate
+    ) {
         this.conversationService = conversationService;
         this.messageService = messageService;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @PostMapping
@@ -83,6 +93,18 @@ public class ConversationController {
         return messageService.findMessages(id, pageable, currentUser);
     }
 
+    @PostMapping("/{id}/messages/attachments")
+    @Operation(summary = "Upload chat attachment", description = "Uploads an image or supported file as a persisted chat message. Sender is taken from JWT identity.")
+    public MessageResponse uploadAttachment(
+            @PathVariable("id") String id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        MessageResponse message = messageService.sendAttachment(id, file, currentUser);
+        messagingTemplate.convertAndSend("/topic/conversations/" + id, message);
+        return message;
+    }
+
     @PostMapping("/{id}/members")
     @Operation(summary = "Add member to group", description = "Adds a member to a group conversation when the current member is allowed to manage membership.")
     public ConversationResponse addMember(
@@ -91,6 +113,16 @@ public class ConversationController {
             @AuthenticationPrincipal CurrentUser currentUser
     ) {
         return conversationService.addMember(id, request, currentUser);
+    }
+
+    @PatchMapping("/{id}/avatar")
+    @Operation(summary = "Update group avatar", description = "Updates avatar image for a group conversation. Only current group members can update it.")
+    public ConversationResponse updateGroupAvatar(
+            @PathVariable("id") String id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        return conversationService.updateGroupAvatar(id, file, currentUser);
     }
 
     @DeleteMapping("/{id}/members/{memberId}")

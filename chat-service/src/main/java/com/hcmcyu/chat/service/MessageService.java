@@ -25,19 +25,22 @@ public class MessageService {
     private final ChatAuthorizationService authorizationService;
     private final ChatMapper chatMapper;
     private final MemberDirectoryClient memberDirectoryClient;
+    private final ChatStorageService storageService;
 
     public MessageService(
             ConversationRepository conversationRepository,
             MessageRepository messageRepository,
             ChatAuthorizationService authorizationService,
             ChatMapper chatMapper,
-            MemberDirectoryClient memberDirectoryClient
+            MemberDirectoryClient memberDirectoryClient,
+            ChatStorageService storageService
     ) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.authorizationService = authorizationService;
         this.chatMapper = chatMapper;
         this.memberDirectoryClient = memberDirectoryClient;
+        this.storageService = storageService;
     }
 
     @Transactional(readOnly = true)
@@ -66,6 +69,36 @@ public class MessageService {
         message.setConversation(conversation);
         message.setSenderId(senderId);
         message.setContent(content);
+        Message saved = messageRepository.save(message);
+        Map<String, String> senderNames = memberDirectoryClient.findDisplayNames(List.of(senderId));
+        return chatMapper.toResponse(saved, senderNames.get(senderId));
+    }
+
+    @Transactional
+    public MessageResponse sendAttachment(
+            String conversationId,
+            org.springframework.web.multipart.MultipartFile file,
+            CurrentUser currentUser
+    ) {
+        String senderId = authorizationService.requireMemberContext(currentUser);
+        authorizationService.requireConversationMember(conversationId, currentUser);
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ChatServiceException(
+                        HttpStatus.NOT_FOUND,
+                        "CONVERSATION_NOT_FOUND",
+                        "Conversation not found"
+                ));
+
+        ChatStorageService.StoredFile storedFile = storageService.storeAttachment(file);
+        Message message = new Message();
+        message.setConversation(conversation);
+        message.setSenderId(senderId);
+        message.setContent(storedFile.originalName());
+        message.setAttachmentUrl(storedFile.url());
+        message.setAttachmentName(storedFile.originalName());
+        message.setAttachmentContentType(storedFile.contentType());
+        message.setAttachmentSize(storedFile.size());
+        message.setAttachmentKind(storedFile.kind());
         Message saved = messageRepository.save(message);
         Map<String, String> senderNames = memberDirectoryClient.findDisplayNames(List.of(senderId));
         return chatMapper.toResponse(saved, senderNames.get(senderId));

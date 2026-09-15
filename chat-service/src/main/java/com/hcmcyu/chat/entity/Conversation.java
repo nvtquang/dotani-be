@@ -29,6 +29,9 @@ public class Conversation {
 
     private String title;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Column(name = "created_by", nullable = false, length = 36)
     private String createdBy;
 
@@ -74,6 +77,14 @@ public class Conversation {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public String getCreatedBy() {

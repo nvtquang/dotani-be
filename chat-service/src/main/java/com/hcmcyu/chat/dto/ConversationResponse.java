@@ -9,6 +9,7 @@ public record ConversationResponse(
         String id,
         ConversationType type,
         String title,
+        String avatarUrl,
         String createdBy,
         List<String> memberIds,
         Map<String, String> memberNames,
