@@ -1,8 +1,24 @@
 spring:
+  main:
+    lazy-initialization: ${SPRING_MAIN_LAZY_INITIALIZATION:true}
   datasource:
     url: ${SPRING_DATASOURCE_URL:${DB_URL}}
     username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME}}
     password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD}}
+    hikari:
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:2}
+      minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:0}
+  flyway:
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+
+management:
+  health:
+    db:
+      enabled: ${MANAGEMENT_HEALTH_DB_ENABLED:false}
 
 audit:
   internal:
