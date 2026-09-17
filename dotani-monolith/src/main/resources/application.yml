@@ -1,0 +1,104 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: dotani-monolith
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:mysql://localhost:3306/dotani_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:root}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:root}}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:5}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
+    baseline-on-migrate: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:false}
+  servlet:
+    multipart:
+      max-file-size: ${MAX_FILE_SIZE:10MB}
+      max-request-size: ${MAX_REQUEST_SIZE:20MB}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+auth:
+  internal:
+    secret: ${AUTH_INTERNAL_SECRET:dev-internal-secret}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+  jwt:
+    secret: ${AUTH_JWT_SECRET:${JWT_SECRET:dev-only-hcmcyu-auth-service-secret-key-change-me-please-32}}
+    access-token-expiration-ms: ${AUTH_ACCESS_TOKEN_EXPIRATION_MS:900000}
+    refresh-token-expiration-ms: ${AUTH_REFRESH_TOKEN_EXPIRATION_MS:604800000}
+
+services:
+  auth:
+    internal-secret: ${AUTH_INTERNAL_SECRET:dev-internal-secret}
+  member:
+    internal-secret: ${AUTH_INTERNAL_SECRET:dev-internal-secret}
+
+audit:
+  internal:
+    secret: ${AUDIT_INTERNAL_SECRET:dev-audit-internal-secret}
+
+notification:
+  internal:
+    secret: ${NOTIFICATION_INTERNAL_SECRET:dev-notification-internal-secret}
+
+storage:
+  local:
+    avatar-path: ${AVATAR_STORAGE_PATH:storage/avatars}
+    bank-qr-path: ${BANK_QR_STORAGE_PATH:storage/bank-qr}
+    post-image-path: ${POST_IMAGE_STORAGE_PATH:storage/post-images}
+  public-url-prefix: ${AVATAR_PUBLIC_URL_PREFIX:/uploads/avatars}
+  bank-qr-public-url-prefix: ${BANK_QR_PUBLIC_URL_PREFIX:/uploads/bank-qr}
+  post-image-public-url-prefix: ${POST_IMAGE_PUBLIC_URL_PREFIX:/uploads/post-images}
+  avatar:
+    max-size-bytes: ${AVATAR_MAX_SIZE_BYTES:2097152}
+  bank-qr:
+    max-size-bytes: ${BANK_QR_MAX_SIZE_BYTES:2097152}
+  post-image:
+    max-size-bytes: ${POST_IMAGE_MAX_SIZE_BYTES:5242880}
+  chat:
+    attachment-path: ${STORAGE_CHAT_ATTACHMENT_PATH:storage/chat-attachments}
+    group-avatar-path: ${STORAGE_CHAT_GROUP_AVATAR_PATH:storage/chat-group-avatars}
+    attachment-public-url-prefix: ${STORAGE_CHAT_ATTACHMENT_PUBLIC_URL_PREFIX:/uploads/chat/attachments}
+    group-avatar-public-url-prefix: ${STORAGE_CHAT_GROUP_AVATAR_PUBLIC_URL_PREFIX:/uploads/chat/group-avatars}
+    max-attachment-size-bytes: ${STORAGE_CHAT_MAX_ATTACHMENT_SIZE_BYTES:10485760}
+    max-group-avatar-size-bytes: ${STORAGE_CHAT_MAX_GROUP_AVATAR_SIZE_BYTES:2097152}
+
+app:
+  cors:
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:*,http://127.0.0.1:*}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+auth:
+  seed:
+    ward-secretary:
+      enabled: true
+      username: ${DEV_WARD_SECRETARY_USERNAME:ward.secretary}
+      email: ${DEV_WARD_SECRETARY_EMAIL:ward.secretary@hcmcyu.local}
+      password: ${DEV_WARD_SECRETARY_PASSWORD:ChangeMe123!}
+
+app:
+  dev:
+    seed:
+      ward-secretary:
+        password: ${DEV_WARD_SECRETARY_PASSWORD:ChangeMe123!}
