@@ -1,14 +1,18 @@
 package com.hcmcyu.event.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -58,6 +62,9 @@ public class Event {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<EventAttachment> attachments = new ArrayList<>();
 
     @PrePersist
     void prePersist() {
@@ -172,5 +179,19 @@ public class Event {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public List<EventAttachment> getAttachments() {
+        return attachments;
+    }
+
+    public void addAttachment(EventAttachment attachment) {
+        attachments.add(attachment);
+        attachment.setEvent(this);
+    }
+
+    public void removeAttachment(EventAttachment attachment) {
+        attachments.remove(attachment);
+        attachment.setEvent(null);
     }
 }

@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/events")
@@ -140,5 +141,26 @@ public class EventController {
             @AuthenticationPrincipal CurrentUser currentUser
     ) {
         eventService.delete(id, currentUser);
+    }
+
+    @PostMapping("/{id}/attachments")
+    @Operation(summary = "Upload event attachments", description = "Uploads images or documents for an event. Management permission and organization scope are enforced.")
+    public EventResponse uploadAttachments(
+            @PathVariable("id") String id,
+            @RequestParam("files") List<MultipartFile> files,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        return eventService.uploadAttachments(id, files, currentUser);
+    }
+
+    @DeleteMapping("/{id}/attachments/{attachmentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete event attachment", description = "Deletes an event attachment when the current user can manage the event.")
+    public void deleteAttachment(
+            @PathVariable("id") String id,
+            @PathVariable("attachmentId") String attachmentId,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        eventService.deleteAttachment(id, attachmentId, currentUser);
     }
 }

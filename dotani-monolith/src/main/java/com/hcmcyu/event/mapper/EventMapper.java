@@ -22,6 +22,15 @@ public class EventMapper {
                 event.getMaxParticipants(),
                 event.getStatus(),
                 event.getCreatedBy(),
+                event.getAttachments().stream()
+                        .map(attachment -> new com.hcmcyu.event.dto.EventAttachmentResponse(
+                                attachment.getId(),
+                                attachment.getFileUrl(),
+                                attachment.getAttachmentKind(),
+                                attachment.getFileName(),
+                                attachment.getCreatedAt()
+                        ))
+                        .toList(),
                 event.getCreatedAt(),
                 event.getUpdatedAt()
         );
