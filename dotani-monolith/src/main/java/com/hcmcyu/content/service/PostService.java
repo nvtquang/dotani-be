@@ -124,6 +124,8 @@ public class PostService {
                 storedUrls.add(imageUrl);
                 PostImage image = new PostImage();
                 image.setImageUrl(imageUrl);
+                image.setAttachmentKind(storageService.attachmentKind(file));
+                image.setFileName(file.getOriginalFilename());
                 post.addImage(image);
             }
             return postMapper.toResponse(postRepository.saveAndFlush(post));

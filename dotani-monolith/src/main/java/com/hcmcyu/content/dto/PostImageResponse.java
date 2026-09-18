@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 public record PostImageResponse(
         String id,
         String imageUrl,
+        String attachmentKind,
+        String fileName,
         LocalDateTime createdAt
 ) {
 }

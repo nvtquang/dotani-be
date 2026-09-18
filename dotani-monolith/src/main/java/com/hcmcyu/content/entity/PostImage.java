@@ -26,6 +26,12 @@ public class PostImage {
     @Column(name = "image_url", nullable = false, length = 1000)
     private String imageUrl;
 
+    @Column(name = "attachment_kind", nullable = false, length = 20)
+    private String attachmentKind = "IMAGE";
+
+    @Column(name = "file_name")
+    private String fileName;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -55,6 +61,22 @@ public class PostImage {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getAttachmentKind() {
+        return attachmentKind;
+    }
+
+    public void setAttachmentKind(String attachmentKind) {
+        this.attachmentKind = attachmentKind;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
     }
 
     public LocalDateTime getCreatedAt() {

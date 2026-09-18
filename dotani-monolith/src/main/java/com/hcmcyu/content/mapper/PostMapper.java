@@ -19,7 +19,13 @@ public class PostMapper {
                 post.getAuthorId(),
                 post.getStatus(),
                 post.getImages().stream()
-                        .map(image -> new PostImageResponse(image.getId(), image.getImageUrl(), image.getCreatedAt()))
+                        .map(image -> new PostImageResponse(
+                                image.getId(),
+                                image.getImageUrl(),
+                                image.getAttachmentKind(),
+                                image.getFileName(),
+                                image.getCreatedAt()
+                        ))
                         .toList(),
                 post.getCreatedAt(),
                 post.getUpdatedAt()

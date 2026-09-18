@@ -1,0 +1,3 @@
+ALTER TABLE post_images
+    ADD COLUMN attachment_kind VARCHAR(20) NOT NULL DEFAULT 'IMAGE',
+    ADD COLUMN file_name VARCHAR(255) NULL;

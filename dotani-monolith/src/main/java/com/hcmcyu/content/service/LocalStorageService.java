@@ -18,7 +18,13 @@ public class LocalStorageService implements StorageService {
     private static final Map<String, String> ALLOWED_EXTENSIONS_BY_CONTENT_TYPE = Map.of(
             "image/jpeg", "jpg",
             "image/png", "png",
-            "image/webp", "webp"
+            "image/webp", "webp",
+            "application/pdf", "pdf",
+            "text/plain", "txt",
+            "application/msword", "doc",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx",
+            "application/vnd.ms-excel", "xls",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx"
     );
 
     private final Path storagePath;
@@ -51,8 +57,8 @@ public class LocalStorageService implements StorageService {
         } catch (IOException exception) {
             throw new ContentServiceException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    "POST_IMAGE_STORAGE_FAILED",
-                    "Could not store post image"
+                    "POST_ATTACHMENT_STORAGE_FAILED",
+                    "Could not store post attachment"
             );
         }
     }
@@ -75,30 +81,30 @@ public class LocalStorageService implements StorageService {
         } catch (IOException exception) {
             throw new ContentServiceException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    "POST_IMAGE_DELETE_FAILED",
-                    "Could not delete post image"
+                    "POST_ATTACHMENT_DELETE_FAILED",
+                    "Could not delete post attachment"
             );
         }
     }
 
     private void validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw invalidFile("Post image is required");
+            throw invalidFile("Post attachment is required");
         }
         if (file.getSize() > maxSizeBytes) {
             throw new ContentServiceException(
                     HttpStatus.PAYLOAD_TOO_LARGE,
-                    "POST_IMAGE_TOO_LARGE",
-                    "Post image exceeds allowed size"
+                    "POST_ATTACHMENT_TOO_LARGE",
+                    "Post attachment exceeds allowed size"
             );
         }
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_EXTENSIONS_BY_CONTENT_TYPE.containsKey(contentType.toLowerCase(Locale.ROOT))) {
-            throw invalidFile("Only jpg, jpeg, png, and webp images are allowed");
+            throw invalidFile("Only jpg, jpeg, png, webp, pdf, txt, doc, docx, xls, and xlsx files are allowed");
         }
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || !hasAllowedExtension(originalFilename)) {
-            throw invalidFile("Only jpg, jpeg, png, and webp images are allowed");
+            throw invalidFile("Only jpg, jpeg, png, webp, pdf, txt, doc, docx, xls, and xlsx files are allowed");
         }
     }
 
@@ -118,7 +124,13 @@ public class LocalStorageService implements StorageService {
         return lower.endsWith(".jpg")
                 || lower.endsWith(".jpeg")
                 || lower.endsWith(".png")
-                || lower.endsWith(".webp");
+                || lower.endsWith(".webp")
+                || lower.endsWith(".pdf")
+                || lower.endsWith(".txt")
+                || lower.endsWith(".doc")
+                || lower.endsWith(".docx")
+                || lower.endsWith(".xls")
+                || lower.endsWith(".xlsx");
     }
 
     private String stripTrailingSlash(String value) {
@@ -129,6 +141,6 @@ public class LocalStorageService implements StorageService {
     }
 
     private ContentServiceException invalidFile(String message) {
-        return new ContentServiceException(HttpStatus.BAD_REQUEST, "INVALID_POST_IMAGE_FILE", message);
+        return new ContentServiceException(HttpStatus.BAD_REQUEST, "INVALID_POST_ATTACHMENT_FILE", message);
     }
 }
