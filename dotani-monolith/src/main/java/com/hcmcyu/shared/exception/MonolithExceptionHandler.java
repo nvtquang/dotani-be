@@ -16,6 +16,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -79,6 +80,14 @@ public class MonolithExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleMaxUpload(WebRequest request) {
         return error(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_LARGE", "Uploaded file is too large", request, List.of());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnreadableBody(
+            HttpMessageNotReadableException exception,
+            WebRequest request
+    ) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_REQUEST_BODY", "Request body is invalid or malformed", request, List.of());
     }
 
     @ExceptionHandler(AccessDeniedException.class)

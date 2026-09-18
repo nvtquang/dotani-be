@@ -95,6 +95,20 @@ public class OrganizationService {
     public void delete(String id, CurrentUser user) {
         OrganizationUnit organizationUnit = getOrganizationUnit(id);
         organizationScopeService.requireWrite(user, organizationUnit);
+        if (!organizationUnitRepository.findByParentId(id).isEmpty()) {
+            throw new MemberServiceException(
+                    HttpStatus.CONFLICT,
+                    "ORGANIZATION_HAS_CHILDREN",
+                    "Không thể xóa đơn vị đang có đơn vị cấp dưới"
+            );
+        }
+        if (memberRepository.countByOrganization_Id(id) > 0) {
+            throw new MemberServiceException(
+                    HttpStatus.CONFLICT,
+                    "ORGANIZATION_HAS_MEMBERS",
+                    "Không thể xóa tổ dân phố đang có đoàn viên"
+            );
+        }
         organizationUnitRepository.delete(organizationUnit);
     }
 
