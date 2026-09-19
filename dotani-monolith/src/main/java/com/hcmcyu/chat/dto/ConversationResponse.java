@@ -13,6 +13,9 @@ public record ConversationResponse(
         String createdBy,
         List<String> memberIds,
         Map<String, String> memberNames,
+        LocalDateTime lastMessageAt,
+        String lastMessagePreview,
+        long unreadCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

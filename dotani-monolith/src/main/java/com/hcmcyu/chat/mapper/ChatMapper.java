@@ -4,6 +4,7 @@ import com.hcmcyu.chat.dto.ConversationResponse;
 import com.hcmcyu.chat.dto.MessageResponse;
 import com.hcmcyu.chat.entity.Conversation;
 import com.hcmcyu.chat.entity.Message;
+import java.time.LocalDateTime;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -11,10 +12,20 @@ import org.springframework.stereotype.Component;
 public class ChatMapper {
 
     public ConversationResponse toResponse(Conversation conversation) {
-        return toResponse(conversation, Map.of());
+        return toResponse(conversation, Map.of(), null, null, 0);
     }
 
     public ConversationResponse toResponse(Conversation conversation, Map<String, String> memberNames) {
+        return toResponse(conversation, memberNames, null, null, 0);
+    }
+
+    public ConversationResponse toResponse(
+            Conversation conversation,
+            Map<String, String> memberNames,
+            LocalDateTime lastMessageAt,
+            String lastMessagePreview,
+            long unreadCount
+    ) {
         return new ConversationResponse(
                 conversation.getId(),
                 conversation.getType(),
@@ -26,6 +37,9 @@ public class ChatMapper {
                         .sorted()
                         .toList(),
                 memberNames,
+                lastMessageAt,
+                lastMessagePreview,
+                unreadCount,
                 conversation.getCreatedAt(),
                 conversation.getUpdatedAt()
         );

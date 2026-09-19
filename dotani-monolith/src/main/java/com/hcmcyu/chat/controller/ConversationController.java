@@ -83,6 +83,15 @@ public class ConversationController {
         return conversationService.findById(id, currentUser);
     }
 
+    @PatchMapping("/{id}/read")
+    @Operation(summary = "Mark conversation as read", description = "Marks all current messages in this conversation as read for the current member.")
+    public ConversationResponse markRead(
+            @PathVariable("id") String id,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        return conversationService.markRead(id, currentUser);
+    }
+
     @GetMapping("/{id}/messages")
     @Operation(summary = "Get message history", description = "Paginated message history. Only conversation members can read messages.")
     public Page<MessageResponse> findMessages(

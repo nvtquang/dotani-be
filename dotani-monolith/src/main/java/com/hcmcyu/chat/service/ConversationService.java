@@ -6,11 +6,14 @@ import com.hcmcyu.chat.dto.ConversationResponse;
 import com.hcmcyu.chat.entity.Conversation;
 import com.hcmcyu.chat.entity.ConversationMember;
 import com.hcmcyu.chat.entity.ConversationType;
+import com.hcmcyu.chat.entity.Message;
 import com.hcmcyu.chat.exception.ChatServiceException;
 import com.hcmcyu.chat.mapper.ChatMapper;
 import com.hcmcyu.chat.repository.ConversationMemberRepository;
 import com.hcmcyu.chat.repository.ConversationRepository;
+import com.hcmcyu.chat.repository.MessageRepository;
 import com.hcmcyu.chat.security.CurrentUser;
+import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +28,7 @@ public class ConversationService {
 
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
+    private final MessageRepository messageRepository;
     private final ChatAuthorizationService authorizationService;
     private final ChatMapper chatMapper;
     private final MemberDirectoryClient memberDirectoryClient;
@@ -33,6 +37,7 @@ public class ConversationService {
     public ConversationService(
             ConversationRepository conversationRepository,
             ConversationMemberRepository conversationMemberRepository,
+            MessageRepository messageRepository,
             ChatAuthorizationService authorizationService,
             ChatMapper chatMapper,
             MemberDirectoryClient memberDirectoryClient,
@@ -40,6 +45,7 @@ public class ConversationService {
     ) {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
+        this.messageRepository = messageRepository;
         this.authorizationService = authorizationService;
         this.chatMapper = chatMapper;
         this.memberDirectoryClient = memberDirectoryClient;
@@ -69,14 +75,28 @@ public class ConversationService {
                 .stream()
                 .map(ConversationMember::getConversation)
                 .map(conversation -> conversationRepository.findByIdWithMembers(conversation.getId()).orElseThrow())
-                .map(this::toResponse)
+                .map(conversation -> toResponse(conversation, currentMemberId))
+                .sorted((left, right) -> conversationSortTime(right).compareTo(conversationSortTime(left)))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public ConversationResponse findById(String id, CurrentUser currentUser) {
         authorizationService.requireConversationMember(id, currentUser);
-        return toResponse(getConversationWithMembers(id));
+        return toResponse(getConversationWithMembers(id), authorizationService.requireMemberContext(currentUser));
+    }
+
+    @Transactional
+    public ConversationResponse markRead(String id, CurrentUser currentUser) {
+        String currentMemberId = authorizationService.requireMemberContext(currentUser);
+        ConversationMember member = conversationMemberRepository.findByConversation_IdAndMemberId(id, currentMemberId)
+                .orElseThrow(() -> new ChatServiceException(
+                        HttpStatus.FORBIDDEN,
+                        "CONVERSATION_ACCESS_DENIED",
+                        "Current member is not part of this conversation"
+                ));
+        member.setLastReadAt(LocalDateTime.now());
+        return toResponse(getConversationWithMembers(id), currentMemberId);
     }
 
     @Transactional
@@ -155,10 +175,50 @@ public class ConversationService {
     }
 
     private ConversationResponse toResponse(Conversation conversation) {
+        return toResponse(conversation, null);
+    }
+
+    private ConversationResponse toResponse(Conversation conversation, String currentMemberId) {
         Map<String, String> memberNames = memberDirectoryClient.findDisplayNames(conversation.getMembers().stream()
                 .map(ConversationMember::getMemberId)
                 .toList());
-        return chatMapper.toResponse(conversation, memberNames);
+        Message lastMessage = messageRepository.findTopByConversation_IdOrderByCreatedAtDesc(conversation.getId()).orElse(null);
+        long unreadCount = currentMemberId == null ? 0 : calculateUnreadCount(conversation, currentMemberId);
+        return chatMapper.toResponse(
+                conversation,
+                memberNames,
+                lastMessage == null ? null : lastMessage.getCreatedAt(),
+                lastMessage == null ? null : lastMessage.getContent(),
+                unreadCount
+        );
+    }
+
+    private long calculateUnreadCount(Conversation conversation, String currentMemberId) {
+        ConversationMember currentMember = conversation.getMembers().stream()
+                .filter(member -> member.getMemberId().equals(currentMemberId))
+                .findFirst()
+                .orElse(null);
+        if (currentMember == null) {
+            return 0;
+        }
+        if (currentMember.getLastReadAt() == null) {
+            return messageRepository.countByConversation_IdAndSenderIdNot(conversation.getId(), currentMemberId);
+        }
+        return messageRepository.countByConversation_IdAndCreatedAtAfterAndSenderIdNot(
+                conversation.getId(),
+                currentMember.getLastReadAt(),
+                currentMemberId
+        );
+    }
+
+    private LocalDateTime conversationSortTime(ConversationResponse conversation) {
+        if (conversation.lastMessageAt() != null) {
+            return conversation.lastMessageAt();
+        }
+        if (conversation.updatedAt() != null) {
+            return conversation.updatedAt();
+        }
+        return conversation.createdAt();
     }
 
     private void validateConversationMembers(ConversationType type, Set<String> memberIds) {

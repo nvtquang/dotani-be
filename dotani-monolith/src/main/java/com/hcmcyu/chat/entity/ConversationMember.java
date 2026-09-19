@@ -36,6 +36,9 @@ public class ConversationMember {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "last_read_at")
+    private LocalDateTime lastReadAt;
+
     @PrePersist
     void prePersist() {
         if (id == null) {
@@ -66,5 +69,13 @@ public class ConversationMember {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public LocalDateTime getLastReadAt() {
+        return lastReadAt;
+    }
+
+    public void setLastReadAt(LocalDateTime lastReadAt) {
+        this.lastReadAt = lastReadAt;
     }
 }
