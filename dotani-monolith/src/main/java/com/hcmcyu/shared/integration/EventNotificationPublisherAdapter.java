@@ -31,7 +31,8 @@ public class EventNotificationPublisherAdapter implements EventNotificationPubli
 
     @Override
     public void publishEventCreated(Event event) {
-        List<String> recipientIds = memberRepository.findIdsByOrganizationIdAndStatus(
+        // Ward-level events must reach members of every TDP under the ward, not only members attached to the ward itself.
+        List<String> recipientIds = memberRepository.findIdsInOrganizationTreeAndStatus(
                 event.getOrganizationId(),
                 MemberStatus.ACTIVE
         );

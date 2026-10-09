@@ -25,9 +25,10 @@ public interface MemberRepository extends JpaRepository<Member, String>, JpaSpec
     long countByMemberRoleIn(Collection<MemberRole> memberRoles);
 
     @Query("select member.id from Member member "
-            + "where member.organization.id = :organizationId "
+            + "left join member.organization.parent parent "
+            + "where (member.organization.id = :organizationId or parent.id = :organizationId) "
             + "and member.memberStatus = :status")
-    List<String> findIdsByOrganizationIdAndStatus(
+    List<String> findIdsInOrganizationTreeAndStatus(
             @Param("organizationId") String organizationId,
             @Param("status") MemberStatus status
     );

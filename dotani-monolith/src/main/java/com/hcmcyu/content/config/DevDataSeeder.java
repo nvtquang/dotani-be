@@ -1,7 +1,6 @@
 package com.hcmcyu.content.config;
 
 import com.hcmcyu.content.entity.Post;
-import com.hcmcyu.content.entity.PostImage;
 import com.hcmcyu.content.entity.PostStatus;
 import com.hcmcyu.content.entity.PostType;
 import com.hcmcyu.content.repository.PostRepository;
@@ -30,16 +29,14 @@ public class DevDataSeeder implements CommandLineRunner {
                 "Lịch sinh hoạt và triển khai công việc tháng này.",
                 PostType.ANNOUNCEMENT,
                 "ward-thuong-cat",
-                "ward-secretary-member",
-                "dev-ward-announcement.png"
+                "ward-secretary-member"
         );
         seedPost(
                 "Tin mới từ Đoàn phường Thượng Cát",
                 "Cập nhật các hoạt động nổi bật của Đoàn phường.",
                 PostType.NEWS,
                 "ward-thuong-cat",
-                "ward-deputy-member",
-                "dev-ward-news.png"
+                "ward-deputy-member"
         );
 
         for (int tdp = 1; tdp <= 5; tdp++) {
@@ -48,16 +45,14 @@ public class DevDataSeeder implements CommandLineRunner {
                     "Báo cáo ảnh hoạt động tình nguyện của chi đoàn TDP " + tdp + ".",
                     PostType.ACTIVITY_REPORT,
                     "tdp-" + tdp,
-                    "tdp-" + tdp + "-secretary-member",
-                    "dev-tdp-" + tdp + "-report.png"
+                    "tdp-" + tdp + "-secretary-member"
             );
             seedPost(
                     "Thông tin sinh hoạt TDP " + tdp,
                     "Nội dung sinh hoạt chi đoàn TDP " + tdp + ".",
                     PostType.OTHER,
                     "tdp-" + tdp,
-                    "tdp-" + tdp + "-deputy-member",
-                    "dev-tdp-" + tdp + "-activity.webp"
+                    "tdp-" + tdp + "-deputy-member"
             );
         }
     }
@@ -67,8 +62,7 @@ public class DevDataSeeder implements CommandLineRunner {
             String content,
             PostType type,
             String organizationId,
-            String authorId,
-            String imageName
+            String authorId
     ) {
         Post post = new Post();
         post.setTitle(title);
@@ -78,9 +72,6 @@ public class DevDataSeeder implements CommandLineRunner {
         post.setAuthorId(authorId);
         post.setStatus(PostStatus.PUBLISHED);
 
-        PostImage image = new PostImage();
-        image.setImageUrl("/uploads/post-images/" + imageName);
-        post.addImage(image);
         postRepository.save(post);
     }
 }

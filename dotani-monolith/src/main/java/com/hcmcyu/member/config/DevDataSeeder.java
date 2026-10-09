@@ -161,7 +161,6 @@ public class DevDataSeeder implements CommandLineRunner {
         member.setPhone("0900%06d".formatted(sampleNumber));
         member.setEmail(email);
         member.setAddress("Phường Thượng Cát, Bắc Từ Liêm, Hà Nội");
-        member.setAvatarUrl("/uploads/avatars/dev-avatar-" + sampleNumber + ".png");
         member.setYouthUnionJoinDate(LocalDate.of(2022, 3, 26));
         member.setMemberStatus(MemberStatus.ACTIVE);
         member.setMemberRole(role);
@@ -170,7 +169,6 @@ public class DevDataSeeder implements CommandLineRunner {
         member.setBankCode("DEMO");
         member.setAccountNumber("DEMO%08d".formatted(sampleNumber));
         member.setAccountHolderName(fullName.toUpperCase());
-        member.setBankQrImageUrl("/uploads/bank-qr/dev-bank-qr-" + sampleNumber + ".png");
         memberRepository.save(member);
     }
 }

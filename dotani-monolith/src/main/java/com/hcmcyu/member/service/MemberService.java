@@ -30,6 +30,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Service
 public class MemberService {
 
@@ -94,6 +99,18 @@ public class MemberService {
 
         return memberRepository.findAll(specification, pageable)
                 .map(memberMapper::toDirectoryResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MemberDirectoryResponse> lookupDirectory(List<String> memberIds) {
+        Set<String> ids = memberIds.stream()
+                .filter(memberId -> memberId != null && !memberId.isBlank())
+                .map(String::trim)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        return memberRepository.findAllById(ids).stream()
+                .map(memberMapper::toDirectoryResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)

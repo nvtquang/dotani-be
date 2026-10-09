@@ -3,6 +3,7 @@ package com.hcmcyu.member.controller;
 import com.hcmcyu.member.dto.MemberBankingRequest;
 import com.hcmcyu.member.dto.MemberBankingResponse;
 import com.hcmcyu.member.dto.MemberDirectoryResponse;
+import com.hcmcyu.member.dto.MemberDisplayNameRequest;
 import com.hcmcyu.member.dto.MemberProfileUpdateRequest;
 import com.hcmcyu.member.dto.MemberRequest;
 import com.hcmcyu.member.dto.MemberResponse;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -78,6 +80,12 @@ public class MemberController {
             @PageableDefault(size = 10, sort = "fullName") Pageable pageable
     ) {
         return memberService.findDirectory(keyword, pageable);
+    }
+
+    @PostMapping("/lookup")
+    @Operation(summary = "Look up members by ids", description = "Authenticated batch lookup returning the same public fields as the directory (id, name, organization, avatar). Used to render names/avatars without per-member requests.")
+    public List<MemberDirectoryResponse> lookup(@Valid @RequestBody MemberDisplayNameRequest request) {
+        return memberService.lookupDirectory(request.memberIds());
     }
 
     @GetMapping("/me")
