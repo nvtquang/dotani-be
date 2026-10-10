@@ -34,28 +34,12 @@ management:
         include: health
 
 auth:
-  internal:
-    secret: ${AUTH_INTERNAL_SECRET:dev-internal-secret}
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
   jwt:
-    secret: ${AUTH_JWT_SECRET:${JWT_SECRET:dev-only-hcmcyu-auth-service-secret-key-change-me-please-32}}
+    secret: ${AUTH_JWT_SECRET:${JWT_SECRET:dev-only-dotani-jwt-secret-key-change-me-please-32-chars}}
     access-token-expiration-ms: ${AUTH_ACCESS_TOKEN_EXPIRATION_MS:900000}
     refresh-token-expiration-ms: ${AUTH_REFRESH_TOKEN_EXPIRATION_MS:604800000}
-
-services:
-  auth:
-    internal-secret: ${AUTH_INTERNAL_SECRET:dev-internal-secret}
-  member:
-    internal-secret: ${AUTH_INTERNAL_SECRET:dev-internal-secret}
-
-audit:
-  internal:
-    secret: ${AUDIT_INTERNAL_SECRET:dev-audit-internal-secret}
-
-notification:
-  internal:
-    secret: ${NOTIFICATION_INTERNAL_SECRET:dev-notification-internal-secret}
 
 storage:
   local:
@@ -98,11 +82,11 @@ auth:
     ward-secretary:
       enabled: true
       username: ${DEV_WARD_SECRETARY_USERNAME:ward.secretary}
-      email: ${DEV_WARD_SECRETARY_EMAIL:ward.secretary@hcmcyu.local}
-      password: ${DEV_WARD_SECRETARY_PASSWORD:ChangeMe123!}
+      email: ${DEV_WARD_SECRETARY_EMAIL:ward.secretary@dotani.local}
+      password: ${DEV_WARD_SECRETARY_PASSWORD:Demo@12345}
 
 app:
   dev:
     seed:
       ward-secretary:
-        password: ${DEV_WARD_SECRETARY_PASSWORD:ChangeMe123!}
+        password: ${DEV_WARD_SECRETARY_PASSWORD:Demo@12345}

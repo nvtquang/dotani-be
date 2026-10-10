@@ -1,0 +1,77 @@
+package com.dotani.content.config;
+
+import com.dotani.content.entity.Post;
+import com.dotani.content.entity.PostStatus;
+import com.dotani.content.entity.PostType;
+import com.dotani.content.repository.PostRepository;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+
+@Component
+@Profile("dev")
+public class DevDataSeeder implements CommandLineRunner {
+
+    private final PostRepository postRepository;
+
+    public DevDataSeeder(PostRepository postRepository) {
+        this.postRepository = postRepository;
+    }
+
+    @Override
+    public void run(String... args) {
+        if (postRepository.count() > 0) {
+            return;
+        }
+
+        seedPost(
+                "Thông báo lịch sinh hoạt Đoàn phường",
+                "Lịch sinh hoạt và triển khai công việc tháng này.",
+                PostType.ANNOUNCEMENT,
+                "ward-thuong-cat",
+                "ward-secretary-member"
+        );
+        seedPost(
+                "Tin mới từ Đoàn phường Thượng Cát",
+                "Cập nhật các hoạt động nổi bật của Đoàn phường.",
+                PostType.NEWS,
+                "ward-thuong-cat",
+                "ward-deputy-member"
+        );
+
+        for (int tdp = 1; tdp <= 5; tdp++) {
+            seedPost(
+                    "Báo cáo hoạt động TDP " + tdp,
+                    "Báo cáo ảnh hoạt động tình nguyện của chi đoàn TDP " + tdp + ".",
+                    PostType.ACTIVITY_REPORT,
+                    "tdp-" + tdp,
+                    "tdp-" + tdp + "-secretary-member"
+            );
+            seedPost(
+                    "Thông tin sinh hoạt TDP " + tdp,
+                    "Nội dung sinh hoạt chi đoàn TDP " + tdp + ".",
+                    PostType.OTHER,
+                    "tdp-" + tdp,
+                    "tdp-" + tdp + "-deputy-member"
+            );
+        }
+    }
+
+    private void seedPost(
+            String title,
+            String content,
+            PostType type,
+            String organizationId,
+            String authorId
+    ) {
+        Post post = new Post();
+        post.setTitle(title);
+        post.setContent(content);
+        post.setType(type);
+        post.setOrganizationId(organizationId);
+        post.setAuthorId(authorId);
+        post.setStatus(PostStatus.PUBLISHED);
+
+        postRepository.save(post);
+    }
+}

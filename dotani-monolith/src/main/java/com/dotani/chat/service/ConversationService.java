@@ -1,0 +1,271 @@
+package com.dotani.chat.service;
+
+import com.dotani.member.service.MemberDirectoryService;
+
+import com.dotani.chat.dto.ConversationCreateRequest;
+import com.dotani.chat.dto.ConversationMemberRequest;
+import com.dotani.chat.dto.ConversationResponse;
+import com.dotani.chat.entity.Conversation;
+import com.dotani.chat.entity.ConversationMember;
+import com.dotani.chat.entity.ConversationType;
+import com.dotani.chat.entity.Message;
+import com.dotani.shared.exception.ApiException;
+import com.dotani.chat.mapper.ChatMapper;
+import com.dotani.chat.repository.ConversationMemberRepository;
+import com.dotani.chat.repository.ConversationRepository;
+import com.dotani.chat.repository.MessageRepository;
+import com.dotani.shared.security.CurrentUser;
+import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class ConversationService {
+
+    private final ConversationRepository conversationRepository;
+    private final ConversationMemberRepository conversationMemberRepository;
+    private final MessageRepository messageRepository;
+    private final ChatAuthorizationService authorizationService;
+    private final ChatMapper chatMapper;
+    private final MemberDirectoryService memberDirectoryService;
+    private final ChatStorageService storageService;
+
+    public ConversationService(
+            ConversationRepository conversationRepository,
+            ConversationMemberRepository conversationMemberRepository,
+            MessageRepository messageRepository,
+            ChatAuthorizationService authorizationService,
+            ChatMapper chatMapper,
+            MemberDirectoryService memberDirectoryService,
+            ChatStorageService storageService
+    ) {
+        this.conversationRepository = conversationRepository;
+        this.conversationMemberRepository = conversationMemberRepository;
+        this.messageRepository = messageRepository;
+        this.authorizationService = authorizationService;
+        this.chatMapper = chatMapper;
+        this.memberDirectoryService = memberDirectoryService;
+        this.storageService = storageService;
+    }
+
+    @Transactional
+    public ConversationResponse create(ConversationCreateRequest request, CurrentUser currentUser) {
+        String currentMemberId = authorizationService.requireMemberContext(currentUser);
+        Set<String> memberIds = new LinkedHashSet<>(request.memberIds());
+        memberIds.add(currentMemberId);
+        validateConversationMembers(request.type(), memberIds);
+
+        Conversation conversation = new Conversation();
+        conversation.setType(request.type());
+        conversation.setTitle(normalizeTitle(request.title()));
+        conversation.setCreatedBy(currentMemberId);
+        memberIds.forEach(memberId -> addMemberEntity(conversation, memberId));
+
+        return toResponse(conversationRepository.saveAndFlush(conversation));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConversationResponse> findMine(CurrentUser currentUser) {
+        String currentMemberId = authorizationService.requireMemberContext(currentUser);
+        return conversationMemberRepository.findByMemberIdOrderByCreatedAtDesc(currentMemberId)
+                .stream()
+                .map(ConversationMember::getConversation)
+                .map(conversation -> conversationRepository.findByIdWithMembers(conversation.getId()).orElseThrow())
+                .map(conversation -> toResponse(conversation, currentMemberId))
+                .sorted((left, right) -> conversationSortTime(right).compareTo(conversationSortTime(left)))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ConversationResponse findById(String id, CurrentUser currentUser) {
+        authorizationService.requireConversationMember(id, currentUser);
+        return toResponse(getConversationWithMembers(id), authorizationService.requireMemberContext(currentUser));
+    }
+
+    @Transactional
+    public ConversationResponse markRead(String id, CurrentUser currentUser) {
+        String currentMemberId = authorizationService.requireMemberContext(currentUser);
+        ConversationMember member = conversationMemberRepository.findByConversation_IdAndMemberId(id, currentMemberId)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.FORBIDDEN,
+                        "CONVERSATION_ACCESS_DENIED",
+                        "Current member is not part of this conversation"
+                ));
+        // created_at is a whole-second column that MySQL rounds (10:00:00.6 is stored as 10:00:01), so a
+        // message may look newer than "now". Never mark read earlier than the latest stored message.
+        LocalDateTime readAt = LocalDateTime.now();
+        LocalDateTime latestMessageAt = messageRepository.findTopByConversation_IdOrderByCreatedAtDesc(id)
+                .map(Message::getCreatedAt)
+                .orElse(null);
+        if (latestMessageAt != null && latestMessageAt.isAfter(readAt)) {
+            readAt = latestMessageAt;
+        }
+        member.setLastReadAt(readAt);
+        return toResponse(getConversationWithMembers(id), currentMemberId);
+    }
+
+    @Transactional
+    public ConversationResponse addMember(
+            String conversationId,
+            ConversationMemberRequest request,
+            CurrentUser currentUser
+    ) {
+        authorizationService.requireConversationMember(conversationId, currentUser);
+        Conversation conversation = getConversationWithMembers(conversationId);
+        if (conversation.getType() != ConversationType.GROUP) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "DIRECT_CONVERSATION_IMMUTABLE",
+                    "Cannot add members to a direct conversation"
+            );
+        }
+        if (conversationMemberRepository.existsByConversation_IdAndMemberId(conversationId, request.memberId())) {
+            return toResponse(conversation);
+        }
+
+        addMemberEntity(conversation, request.memberId());
+        try {
+            return toResponse(conversationRepository.saveAndFlush(conversation));
+        } catch (DataIntegrityViolationException exception) {
+            return toResponse(getConversationWithMembers(conversationId));
+        }
+    }
+
+    @Transactional
+    public void removeMember(String conversationId, String memberId, CurrentUser currentUser) {
+        authorizationService.requireConversationMember(conversationId, currentUser);
+        Conversation conversation = getConversationWithMembers(conversationId);
+        if (conversation.getType() != ConversationType.GROUP) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "DIRECT_CONVERSATION_IMMUTABLE",
+                    "Cannot remove members from a direct conversation"
+            );
+        }
+        ConversationMember member = conversationMemberRepository.findByConversation_IdAndMemberId(conversationId, memberId)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND,
+                        "CONVERSATION_MEMBER_NOT_FOUND",
+                        "Conversation member not found"
+                ));
+        conversation.removeMember(member);
+    }
+
+    @Transactional
+    public ConversationResponse updateGroupAvatar(
+            String conversationId,
+            org.springframework.web.multipart.MultipartFile file,
+            CurrentUser currentUser
+    ) {
+        authorizationService.requireConversationMember(conversationId, currentUser);
+        Conversation conversation = getConversationWithMembers(conversationId);
+        if (conversation.getType() != ConversationType.GROUP) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "DIRECT_CONVERSATION_IMMUTABLE",
+                    "Cannot update avatar for a direct conversation"
+            );
+        }
+        conversation.setAvatarUrl(storageService.storeGroupAvatar(file));
+        return toResponse(conversationRepository.saveAndFlush(conversation));
+    }
+
+    private Conversation getConversationWithMembers(String id) {
+        return conversationRepository.findByIdWithMembers(id)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND,
+                        "CONVERSATION_NOT_FOUND",
+                        "Conversation not found"
+                ));
+    }
+
+    private ConversationResponse toResponse(Conversation conversation) {
+        return toResponse(conversation, null);
+    }
+
+    private ConversationResponse toResponse(Conversation conversation, String currentMemberId) {
+        Map<String, String> memberNames = memberDirectoryService.findDisplayNames(conversation.getMembers().stream()
+                .map(ConversationMember::getMemberId)
+                .toList());
+        Message lastMessage = messageRepository.findTopByConversation_IdOrderByCreatedAtDesc(conversation.getId()).orElse(null);
+        long unreadCount = currentMemberId == null ? 0 : calculateUnreadCount(conversation, currentMemberId);
+        return chatMapper.toResponse(
+                conversation,
+                memberNames,
+                lastMessage == null ? null : lastMessage.getCreatedAt(),
+                lastMessage == null ? null : lastMessage.getContent(),
+                unreadCount
+        );
+    }
+
+    private long calculateUnreadCount(Conversation conversation, String currentMemberId) {
+        ConversationMember currentMember = conversation.getMembers().stream()
+                .filter(member -> member.getMemberId().equals(currentMemberId))
+                .findFirst()
+                .orElse(null);
+        if (currentMember == null) {
+            return 0;
+        }
+        if (currentMember.getLastReadAt() == null) {
+            return messageRepository.countByConversation_IdAndSenderIdNot(conversation.getId(), currentMemberId);
+        }
+        return messageRepository.countByConversation_IdAndCreatedAtAfterAndSenderIdNot(
+                conversation.getId(),
+                currentMember.getLastReadAt(),
+                currentMemberId
+        );
+    }
+
+    private LocalDateTime conversationSortTime(ConversationResponse conversation) {
+        if (conversation.lastMessageAt() != null) {
+            return conversation.lastMessageAt();
+        }
+        if (conversation.updatedAt() != null) {
+            return conversation.updatedAt();
+        }
+        return conversation.createdAt();
+    }
+
+    private void validateConversationMembers(ConversationType type, Set<String> memberIds) {
+        if (type == ConversationType.DIRECT && memberIds.size() != 2) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_DIRECT_CONVERSATION",
+                    "Direct conversation must have exactly two members"
+            );
+        }
+        if (type == ConversationType.GROUP && memberIds.size() < 2) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_GROUP_CONVERSATION",
+                    "Group conversation must have at least two members"
+            );
+        }
+    }
+
+    private void addMemberEntity(Conversation conversation, String memberId) {
+        if (memberId == null || memberId.isBlank()) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_CONVERSATION_MEMBER",
+                    "Conversation member is required"
+            );
+        }
+        ConversationMember member = new ConversationMember();
+        member.setMemberId(memberId.trim());
+        conversation.addMember(member);
+    }
+
+    private String normalizeTitle(String title) {
+        if (title == null || title.isBlank()) {
+            return null;
+        }
+        return title.trim();
+    }
+}
