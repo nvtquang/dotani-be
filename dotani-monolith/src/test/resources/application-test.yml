@@ -1,0 +1,33 @@
+# Tests run against a real MySQL 8.4 (same engine as production) in a dedicated database.
+# Local: MySQL in D:\Tools with user dotani_test. CI: the mysql service in .github/workflows/ci.yml.
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:mysql://127.0.0.1:3306/dotani_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh}
+    username: ${TEST_DB_USERNAME:dotani_test}
+    password: ${TEST_DB_PASSWORD:dotani_test}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+auth:
+  jwt:
+    secret: test-only-dotani-jwt-secret-key-at-least-32-characters-long
+  google:
+    client-id: test-google-client-id
+
+storage:
+  # Tiny limits so upload tests can exercise the "file too large" path with small payloads.
+  avatar:
+    max-size-bytes: 16
+  bank-qr:
+    max-size-bytes: 16
+  post-image:
+    max-size-bytes: 16
+  local:
+    avatar-path: target/test-storage/avatars
+    bank-qr-path: target/test-storage/bank-qr
+    post-image-path: target/test-storage/post-images
+    event-attachment-path: target/test-storage/event-attachments
+  chat:
+    attachment-path: target/test-storage/chat-attachments
+    group-avatar-path: target/test-storage/chat-group-avatars
