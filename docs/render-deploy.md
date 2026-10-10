@@ -1,415 +1,120 @@
-# Deploy Backend DOTANI/HCMCYU lên Render
+# Deploy backend DOTANI lên Render
 
-Tài liệu này hướng dẫn deploy backend Spring Boot microservice lên Render. Frontend vẫn nên deploy Vercel, còn frontend sẽ gọi API qua `api-gateway` public của Render.
+Backend là **một ứng dụng Spring Boot duy nhất** (`dotani-monolith`) cùng một database MySQL. Frontend deploy riêng trên Vercel và gọi thẳng vào backend.
 
-## Kiến trúc đề xuất
+## Kiến trúc
 
-Render nên chạy mỗi microservice là một service riêng. Root `Dockerfile` mặc định build `api-gateway`; nếu dùng cùng root Dockerfile cho service khác, set Docker build arg `MODULE=<module-name>`. Bạn cũng có thể dùng Dockerfile riêng có sẵn trong từng thư mục service.
-
-| Service | Render type | Public? |
+| Thành phần | Nơi chạy | Ghi chú |
 | --- | --- | --- |
-| `api-gateway` | Web Service | Có |
-| `auth-service` | Private Service | Không |
-| `member-service` | Private Service | Không |
-| `event-service` | Private Service | Không |
-| `content-service` | Private Service | Không |
-| `chat-service` | Private Service | Không |
-| `notification-service` | Private Service | Không |
-| `audit-service` | Private Service | Không |
-| MySQL | External managed MySQL hoặc MySQL Docker + Persistent Disk | Không nên public |
+| Backend `dotani-monolith` | Render **Web Service** (Docker, `Dockerfile` ở gốc repo) | Public, phục vụ REST `/api/**`, WebSocket `/ws/chat`, file `/uploads/**` |
+| MySQL 8.4 | MySQL managed bên ngoài (Aiven, Railway, DigitalOcean...) | Một database, ví dụ `dotani_db`. Render không có MySQL managed |
+| File upload | Render **Persistent Disk** mount vào `/app/storage` | Không có disk thì file mất sau mỗi lần redeploy |
+| Frontend | Vercel | Xem bước 4 |
 
-Lý do: frontend chỉ gọi `api-gateway`; các service còn lại giao tiếp qua Render Private Network.
+## Bước 1: Chuẩn bị MySQL
 
-## Lưu ý quan trọng
+Tạo một database rỗng (Flyway tự tạo bảng khi app khởi động lần đầu):
 
-- Render cung cấp biến `PORT`; backend đã đọc dạng `${PORT:8080}` hoặc `${PORT:<local-port>}` nên local vẫn chạy như cũ.
-
-```env
-PORT=8080
+```sql
+CREATE DATABASE dotani_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-- Render hỗ trợ Docker deploy từ Dockerfile.
-- Render Private Service không có public URL, chỉ có internal address trong cùng region/workspace.
-- Render không có managed MySQL mặc định như Postgres. Nên dùng MySQL managed bên ngoài như Aiven, Railway, DigitalOcean, PlanetScale hoặc tự chạy MySQL Docker trên Render kèm Persistent Disk.
-- Nếu dùng upload local storage, các service cần Persistent Disk, nếu không file sẽ mất khi redeploy/restart.
-
-Nguồn Render:
-
-- Web Service: https://render.com/docs/web-services
-- Docker: https://render.com/docs/docker
-- Private Service: https://render.com/docs/private-services
-- Private Network: https://render.com/docs/private-network
-- Persistent Disk: https://render.com/docs/disks
-
-## Bước 1: Chuẩn bị database MySQL
-
-Khuyến nghị dùng MySQL managed bên ngoài Render.
-
-Tạo các database:
+JDBC URL có dạng:
 
 ```text
-hcmcyu_auth_db
-hcmcyu_member_db
-hcmcyu_event_db
-hcmcyu_content_db
-hcmcyu_chat_db
-hcmcyu_notification_db
-hcmcyu_audit_db
+jdbc:mysql://<host>:<port>/dotani_db?useSSL=true&serverTimezone=Asia/Ho_Chi_Minh
 ```
 
-Mỗi service sẽ có `DB_URL` riêng:
+Nếu provider yêu cầu chứng chỉ/tuỳ chọn SSL riêng, chỉnh URL theo hướng dẫn của provider.
+
+## Bước 2: Tạo Web Service
+
+Render Dashboard → **New → Web Service** → chọn repo backend.
+
+- Runtime: `Docker`, Dockerfile Path: `Dockerfile`
+- Health Check Path: `/actuator/health`
+- Disk: thêm Persistent Disk, Mount Path `/app/storage`
+
+Environment variables:
 
 ```env
-jdbc:mysql://<mysql-host>:<mysql-port>/<db-name>?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
-```
-
-Nếu provider MySQL yêu cầu CA/cert hoặc option SSL riêng, chỉnh URL theo hướng dẫn của provider đó.
-
-## Bước 2: Push code backend lên GitHub
-
-Render nên deploy từ GitHub repo backend.
-
-```powershell
-cd D:\Java\HCMCYU
-git status
-git add .
-git commit -m "Prepare backend for Render deploy"
-git push
-```
-
-## Bước 3: Tạo các secret dùng chung
-
-Tạo các giá trị secret đủ dài:
-
-```env
-AUTH_JWT_SECRET=<random-at-least-32-chars>
-AUTH_INTERNAL_SECRET=<random-secret>
-AUDIT_INTERNAL_SECRET=<random-secret>
-NOTIFICATION_INTERNAL_SECRET=<random-secret>
-GOOGLE_CLIENT_ID=<google-client-id>
-DEV_WARD_SECRETARY_PASSWORD=<demo-password>
-```
-
-Không dùng giá trị `change-me` ở production.
-
-## Bước 4: Tạo Private Service cho từng microservice
-
-Vào Render Dashboard:
-
-```text
-New -> Private Service -> Connect GitHub repo backend
-```
-
-Chọn:
-
-- Runtime/Language: `Docker`
-- Branch: `main` hoặc branch bạn deploy
-- Region: chọn cùng một region cho tất cả service
-- Dockerfile Path: theo từng service
-
-Tạo lần lượt:
-
-### audit-service
-
-```text
-Name: audit-service
-Dockerfile Path: audit-service/Dockerfile
-```
-
-Env:
-
-```env
-SPRING_PROFILES_ACTIVE=docker,dev
-PORT=8087
-DB_URL=jdbc:mysql://<mysql-host>:<mysql-port>/hcmcyu_audit_db?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
+SPRING_PROFILES_ACTIVE=prod
+DB_URL=jdbc:mysql://<host>:<port>/dotani_db?useSSL=true&serverTimezone=Asia/Ho_Chi_Minh
 DB_USERNAME=<mysql-user>
 DB_PASSWORD=<mysql-password>
-AUDIT_INTERNAL_SECRET=<same-secret>
-```
-
-Health Check Path:
-
-```text
-/actuator/health
-```
-
-### auth-service
-
-```text
-Name: auth-service
-Dockerfile Path: auth-service/Dockerfile
-```
-
-Env:
-
-```env
-SPRING_PROFILES_ACTIVE=docker,dev
-PORT=8081
-DB_URL=jdbc:mysql://<mysql-host>:<mysql-port>/hcmcyu_auth_db?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
-DB_USERNAME=<mysql-user>
-DB_PASSWORD=<mysql-password>
-AUTH_JWT_SECRET=<same-jwt-secret>
-AUTH_INTERNAL_SECRET=<same-auth-internal-secret>
-GOOGLE_CLIENT_ID=<google-client-id>
-MEMBER_SERVICE_URL=http://<member-service-internal-address>
-```
-
-Health Check Path:
-
-```text
-/actuator/health
-```
-
-Sau khi tạo `member-service`, quay lại sửa `MEMBER_SERVICE_URL` bằng internal address thật của member-service.
-
-### member-service
-
-```text
-Name: member-service
-Dockerfile Path: member-service/Dockerfile
-```
-
-Env:
-
-```env
-SPRING_PROFILES_ACTIVE=docker,dev
-PORT=8082
-DB_URL=jdbc:mysql://<mysql-host>:<mysql-port>/hcmcyu_member_db?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
-DB_USERNAME=<mysql-user>
-DB_PASSWORD=<mysql-password>
-AUTH_SERVICE_URL=http://<auth-service-internal-address>
-AUTH_INTERNAL_SECRET=<same-auth-internal-secret>
-AUDIT_SERVICE_URL=http://<audit-service-internal-address>
-AUDIT_INTERNAL_SECRET=<same-audit-internal-secret>
+AUTH_JWT_SECRET=<chuỗi ngẫu nhiên, tối thiểu 32 ký tự>
+APP_CORS_ALLOWED_ORIGINS=https://<domain-vercel>
+GOOGLE_CLIENT_ID=<google-oauth-client-id>      # chỉ khi dùng đăng nhập Google
+JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0
 AVATAR_STORAGE_PATH=/app/storage/avatars
 BANK_QR_STORAGE_PATH=/app/storage/bank-qr
-```
-
-Disk nếu muốn giữ avatar/QR sau restart:
-
-```text
-Mount Path: /app/storage
-Size: tùy nhu cầu, ví dụ 1GB
-```
-
-Health Check Path:
-
-```text
-/actuator/health
-```
-
-### event-service
-
-```text
-Name: event-service
-Dockerfile Path: event-service/Dockerfile
-```
-
-Env:
-
-```env
-SPRING_PROFILES_ACTIVE=docker,dev
-PORT=8083
-DB_URL=jdbc:mysql://<mysql-host>:<mysql-port>/hcmcyu_event_db?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
-DB_USERNAME=<mysql-user>
-DB_PASSWORD=<mysql-password>
-AUDIT_SERVICE_URL=http://<audit-service-internal-address>
-AUDIT_INTERNAL_SECRET=<same-audit-internal-secret>
-```
-
-Health Check Path:
-
-```text
-/actuator/health
-```
-
-### content-service
-
-```text
-Name: content-service
-Dockerfile Path: content-service/Dockerfile
-```
-
-Env:
-
-```env
-SPRING_PROFILES_ACTIVE=docker,dev
-PORT=8084
-DB_URL=jdbc:mysql://<mysql-host>:<mysql-port>/hcmcyu_content_db?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
-DB_USERNAME=<mysql-user>
-DB_PASSWORD=<mysql-password>
-AUDIT_SERVICE_URL=http://<audit-service-internal-address>
-AUDIT_INTERNAL_SECRET=<same-audit-internal-secret>
 POST_IMAGE_STORAGE_PATH=/app/storage/post-images
-```
-
-Disk nếu muốn giữ ảnh bài viết:
-
-```text
-Mount Path: /app/storage
-```
-
-Health Check Path:
-
-```text
-/actuator/health
-```
-
-### chat-service
-
-```text
-Name: chat-service
-Dockerfile Path: chat-service/Dockerfile
-```
-
-Env:
-
-```env
-SPRING_PROFILES_ACTIVE=docker,dev
-PORT=8085
-DB_URL=jdbc:mysql://<mysql-host>:<mysql-port>/hcmcyu_chat_db?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
-DB_USERNAME=<mysql-user>
-DB_PASSWORD=<mysql-password>
-JWT_SECRET=<same-jwt-secret>
-MEMBER_SERVICE_URL=http://<member-service-internal-address>
-AUTH_INTERNAL_SECRET=<same-auth-internal-secret>
+EVENT_ATTACHMENT_STORAGE_PATH=/app/storage/event-attachments
 STORAGE_CHAT_ATTACHMENT_PATH=/app/storage/chat-attachments
 STORAGE_CHAT_GROUP_AVATAR_PATH=/app/storage/chat-group-avatars
 ```
 
-Disk nếu muốn giữ file/ảnh chat:
+Render tự cấp biến `PORT`; app đọc `${PORT:8080}` nên không cần khai báo.
 
-```text
-Mount Path: /app/storage
-```
+Profile `prod`:
 
-Health Check Path:
+- **Không có giá trị mặc định** cho `DB_*`, `AUTH_JWT_SECRET`, `APP_CORS_ALLOWED_ORIGINS`. Thiếu biến nào, app dừng ngay khi khởi động với lỗi `Could not resolve placeholder '<TÊN_BIẾN>'`.
+- Swagger/OpenAPI tắt. Muốn bật tạm thời: `SPRINGDOC_ENABLED=true`.
+- Không chạy seed dữ liệu mẫu (seed chỉ có ở profile `dev`).
 
-```text
-/actuator/health
-```
+## Bước 3: Khởi tạo dữ liệu ban đầu (chỉ làm một lần)
 
-### notification-service
+Vì `prod` không seed, database mới **chưa có phường/TDP và chưa có tài khoản quản trị**. Người dùng không đăng ký được cho tới khi có TDP.
 
-```text
-Name: notification-service
-Dockerfile Path: notification-service/Dockerfile
-```
+1. Tạo phường và các TDP:
 
-Env:
+   ```sql
+   INSERT INTO organization_units (id, name, code, type, parent_id, active, created_at, updated_at)
+   VALUES ('ward-thuong-cat', 'Đoàn phường Thượng Cát', 'THUONG_CAT', 'WARD', NULL, TRUE, NOW(), NOW());
 
-```env
-SPRING_PROFILES_ACTIVE=docker,dev
-PORT=8086
-DB_URL=jdbc:mysql://<mysql-host>:<mysql-port>/hcmcyu_notification_db?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
-DB_USERNAME=<mysql-user>
-DB_PASSWORD=<mysql-password>
-JWT_SECRET=<same-jwt-secret>
-NOTIFICATION_INTERNAL_SECRET=<same-notification-secret>
-```
+   INSERT INTO organization_units (id, name, code, type, parent_id, active, created_at, updated_at)
+   VALUES ('tdp-1', 'Chi đoàn TDP 1', 'TDP_1', 'YOUTH_UNION_BRANCH', 'ward-thuong-cat', TRUE, NOW(), NOW());
+   -- lặp lại cho các TDP khác
+   ```
 
-Health Check Path:
+2. Người sẽ làm Bí thư phường tự đăng ký tài khoản trên frontend (chọn một TDP bất kỳ).
 
-```text
-/actuator/health
-```
+3. Nâng tài khoản đó lên `WARD_SECRETARY` và gắn vào phường:
 
-## Bước 5: Tạo api-gateway Web Service public
+   ```sql
+   UPDATE user_accounts SET role = 'WARD_SECRETARY', organization_id = 'ward-thuong-cat', tdp_id = NULL
+   WHERE username = '<username>';
 
-Vào Render Dashboard:
+   UPDATE members m JOIN user_accounts u ON u.member_id = m.id
+   SET m.member_role = 'WARD_SECRETARY', m.organization_id = 'ward-thuong-cat'
+   WHERE u.username = '<username>';
+   ```
 
-```text
-New -> Web Service -> Connect GitHub repo backend
-```
+   Người đó đăng nhập lại để nhận quyền mới. Từ đây các role khác được cấp qua giao diện.
 
-Chọn:
-
-```text
-Runtime: Docker
-Dockerfile Path: ./Dockerfile
-Name: api-gateway
-```
-
-Env:
+## Bước 4: Cấu hình frontend trên Vercel
 
 ```env
-SPRING_PROFILES_ACTIVE=docker
-PORT=8080
-AUTH_JWT_SECRET=<same-jwt-secret>
-AUTH_SERVICE_URL=http://<auth-service-internal-address>
-MEMBER_SERVICE_URL=http://<member-service-internal-address>
-EVENT_SERVICE_URL=http://<event-service-internal-address>
-CONTENT_SERVICE_URL=http://<content-service-internal-address>
-CHAT_SERVICE_URL=http://<chat-service-internal-address>
-CHAT_SERVICE_WS_URL=ws://<chat-service-internal-address>
-NOTIFICATION_SERVICE_URL=http://<notification-service-internal-address>
-AUDIT_SERVICE_URL=http://<audit-service-internal-address>
-FRONTEND_URL=https://<your-vercel-domain>
-APP_CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>,http://localhost:5173
+VITE_API_BASE_URL=https://<backend>.onrender.com
+VITE_CHAT_WS_URL=wss://<backend>.onrender.com/ws/chat
+VITE_GOOGLE_CLIENT_ID=<google-oauth-client-id>
 ```
 
-Health Check Path:
+Redeploy frontend sau khi đổi biến (`VITE_*` được đóng vào bundle lúc build). Nếu dùng Google login, thêm `https://<domain-vercel>` vào Authorized JavaScript origins trong Google Cloud Console.
 
-```text
-/actuator/health
-```
-
-Sau khi deploy xong, bạn sẽ có URL dạng:
-
-```text
-https://api-gateway-xxxx.onrender.com
-```
-
-Đây là backend public URL để cấu hình cho frontend.
-
-## Bước 6: Cấu hình frontend Vercel
-
-Trong Vercel Project Settings -> Environment Variables:
-
-```env
-VITE_API_BASE_URL=https://api-gateway-xxxx.onrender.com
-VITE_CHAT_WS_URL=wss://api-gateway-xxxx.onrender.com/ws/chat
-VITE_GOOGLE_CLIENT_ID=<google-client-id>
-```
-
-Sau đó redeploy frontend trên Vercel.
-
-Nếu dùng Google login, vào Google Cloud Console thêm Authorized JavaScript origin:
-
-```text
-https://<your-vercel-domain>
-```
-
-## Bước 7: Test sau deploy
-
-Test health gateway:
+## Bước 5: Kiểm tra sau deploy
 
 ```powershell
-curl.exe https://api-gateway-xxxx.onrender.com/api/health
-curl.exe https://api-gateway-xxxx.onrender.com/actuator/health
+curl.exe https://<backend>.onrender.com/api/health
+curl.exe https://<backend>.onrender.com/actuator/health
 ```
 
-Test login:
+Sau đó trên frontend: đăng nhập, mở bảng tin, danh sách đoàn viên, chat, và thử upload avatar.
 
-```powershell
-curl.exe -X POST https://api-gateway-xxxx.onrender.com/api/auth/login `
-  -H "Content-Type: application/json" `
-  -d "{\"usernameOrEmail\":\"admin\",\"password\":\"Demo@12345\"}"
-```
+## Lỗi thường gặp
 
-Test trên frontend:
-
-1. Login bằng tài khoản mẫu.
-2. Mở dashboard.
-3. Mở danh sách đoàn viên.
-4. Mở chat.
-5. Upload avatar hoặc ảnh chat nếu đã gắn Persistent Disk.
-
-## Checklist lỗi thường gặp
-
-- `Network Error` trên frontend: kiểm tra `VITE_API_BASE_URL` đã là URL Render public chưa.
-- WebSocket không kết nối: kiểm tra `VITE_CHAT_WS_URL` dùng `wss://.../ws/chat`.
-- 401 sau login: kiểm tra `AUTH_JWT_SECRET` ở auth-service, gateway, chat-service, notification-service phải giống nhau.
-- Service gọi nhau lỗi: kiểm tra internal address trong Render Connect -> Internal.
-- File upload mất sau redeploy: service upload cần Persistent Disk tại `/app/storage`.
-- Google login lỗi: kiểm tra `GOOGLE_CLIENT_ID` backend và `VITE_GOOGLE_CLIENT_ID` frontend cùng một OAuth Client ID.
+- **App không khởi động, log có `Could not resolve placeholder`**: thiếu biến môi trường được nêu trong lỗi.
+- **`Network Error` trên frontend**: `VITE_API_BASE_URL` chưa trỏ đúng URL Render, hoặc domain frontend chưa có trong `APP_CORS_ALLOWED_ORIGINS`.
+- **WebSocket không kết nối**: `VITE_CHAT_WS_URL` phải dùng `wss://.../ws/chat`.
+- **File upload mất sau redeploy**: chưa gắn Persistent Disk vào `/app/storage`.
+- **Google login lỗi**: `GOOGLE_CLIENT_ID` (backend) và `VITE_GOOGLE_CLIENT_ID` (frontend) phải cùng một OAuth Client ID.

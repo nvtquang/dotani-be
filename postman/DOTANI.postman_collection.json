@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "3f1c7804-9d90-4bd4-b36f-73d042fb18d8",
-    "name": "HCMCYU Backend",
-    "description": "Development collection for HCMCYU backend through api-gateway. Flow: Register -> Login -> store accessToken -> call protected APIs. Protected requests use JWT Bearer. Validation, authentication, authorization, and service errors use the shared error response shape.",
+    "name": "DOTANI Backend",
+    "description": "Development collection for DOTANI backend. Flow: Register -> Login -> store accessToken -> call protected APIs. Protected requests use JWT Bearer. Validation, authentication, authorization, and service errors use the shared error response shape.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

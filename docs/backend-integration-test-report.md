@@ -1,92 +1,62 @@
-# HCMCYU Backend Integration Test Report
+# Backend integration tests
 
-Generated: 2026-09-06 17:29:31 +07:00
+Toàn bộ test nằm trong `dotani-monolith/src/test` và chạy qua HTTP (MockMvc) với **JWT thật** và **MySQL 8.4 thật**, nên kiểm tra được cả filter bảo mật, phân quyền theo phạm vi tổ chức và migration Flyway.
 
-## Command
+## Cách chạy
 
-```bash
-mvn clean test
+Test dùng database riêng `dotani_test` với user `dotani_test` / mật khẩu `dotani_test` (cấu hình trong `src/test/resources/application-test.yml`). Mỗi test tự xoá sạch dữ liệu trước khi chạy, không phụ thuộc dữ liệu seed.
+
+Tạo database và user một lần (MySQL chạy tay ở `D:\Tools\mysql-8.4`, đăng nhập bằng root):
+
+```sql
+CREATE DATABASE IF NOT EXISTS dotani_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'dotani_test'@'localhost' IDENTIFIED BY 'dotani_test';
+CREATE USER IF NOT EXISTS 'dotani_test'@'127.0.0.1' IDENTIFIED BY 'dotani_test';
+GRANT ALL PRIVILEGES ON dotani_test.* TO 'dotani_test'@'localhost';
+GRANT ALL PRIVILEGES ON dotani_test.* TO 'dotani_test'@'127.0.0.1';
 ```
 
-## Result
+Chạy:
 
-BUILD SUCCESS
+```powershell
+cd D:\Projects\DOTANI\dotani-be
+mvn clean verify
+```
 
-## Maven reactor summary
+Dùng MySQL khác thì đặt `TEST_DB_URL`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD`. Trên GitHub Actions (`.github/workflows/ci.yml`), MySQL được dựng sẵn dưới dạng service với đúng user này.
 
-| Module | Result | Time |
-| --- | --- | --- |
-| hcmcyu-backend | SUCCESS | 0.264 s |
-| api-gateway | SUCCESS | 56.377 s |
-| auth-service | SUCCESS | 01:00 min |
-| member-service | SUCCESS | 02:25 min |
-| event-service | SUCCESS | 01:11 min |
-| content-service | SUCCESS | 52.827 s |
-| chat-service | SUCCESS | 01:00 min |
-| notification-service | SUCCESS | 52.525 s |
-| audit-service | SUCCESS | 47.502 s |
+Luôn chạy kèm `clean` sau khi xoá/đổi tên class: Maven không tự xoá file `.class` cũ trong `target`, và Spring vẫn quét thấy chúng.
 
-Total time: 09:07 min
+## Kết quả gần nhất
 
-## Test count summary
+`mvn clean verify` trên database trống: **119 test, 0 lỗi**.
 
-| Module | Tests | Status |
-| --- | ---: | --- |
-| api-gateway | 6 | PASS |
-| auth-service | 12 | PASS |
-| member-service | 46 | PASS |
-| event-service | 18 | PASS |
-| content-service | 7 | PASS |
-| chat-service | 7 | PASS |
-| notification-service | 7 | PASS |
-| audit-service | 5 | PASS |
+| Module | Lớp test | Số test | Nội dung chính |
+| --- | --- | ---: | --- |
+| auth | `AuthServiceIntegrationTest` | 13 | Đăng ký, đăng nhập, Google login, refresh token, JWT hết hạn/sai |
+| auth | `SelfRegisteredMemberScopeIntegrationTest` | 1 | Tài khoản tự đăng ký có phạm vi phường + TDP, xem được sự kiện cấp phường |
+| member | `MemberManagementIntegrationTest` | 12 | CRUD đoàn viên theo phạm vi phường / TDP |
+| member | `OrganizationIntegrationTest` | 13 | Tổ chức, đăng ký hồ sơ đoàn viên vào TDP |
+| member | `MemberBankingIntegrationTest` | 10 | Thông tin ngân hàng, QR (không lộ qua `/uploads`) |
+| member | `MemberProfileIntegrationTest` | 6 | Hồ sơ cá nhân, avatar |
+| member | `RoleManagementIntegrationTest` | 5 | Chỉ bí thư phường đổi role, role tài khoản được đồng bộ |
+| member | `MemberSecurityRegressionTest` | 3 | Chống leo thang quyền |
+| member | `MemberDashboardIntegrationTest` | 2 | Thống kê đoàn viên |
+| member | `MemberLookupIntegrationTest` | 2 | `POST /api/members/lookup` chỉ trả trường công khai |
+| event | `EventIntegrationTest` | 15 | Sự kiện, đăng ký tham gia, phạm vi xem |
+| event | `EventAttachmentAndNotificationIntegrationTest` | 4 | File đính kèm sự kiện; thông báo sự kiện cấp phường/TDP |
+| event | `EventDashboardIntegrationTest` | 3 | Thống kê sự kiện |
+| content | `PostIntegrationTest` | 7 | Bài viết, file đính kèm, giới hạn loại/kích thước file |
+| chat | `ChatIntegrationTest` | 9 | Hội thoại, WebSocket STOMP với JWT, chặn người ngoài |
+| chat | `ChatReadStateIntegrationTest` | 2 | Đếm tin chưa đọc, đánh dấu đã đọc |
+| notification | `NotificationIntegrationTest` | 6 | Danh sách, chưa đọc, đánh dấu đã đọc |
+| audit | `AuditLogIntegrationTest` | 4 | Ghi và xem audit log theo role |
+| — | `SmokeIntegrationTest` | 2 | App khởi động, health, xác thực cơ bản |
 
-Total counted integration/unit tests: 108
+## Viết test mới
 
-## Requested flow coverage
+Kế thừa `com.dotani.support.IntegrationTest`, rồi dùng:
 
-| Flow | Coverage | Test classes | Status |
-| --- | --- | --- | --- |
-| FLOW 1 | Register, login, me, update profile, avatar, banking info, banking QR | `AuthServiceIntegrationTest`, `MemberProfileIntegrationTest`, `MemberBankingIntegrationTest` | PASS |
-| FLOW 2 | WARD_SECRETARY login, view organizations, manage member, assign MEMBER to TDP_SECRETARY | `OrganizationIntegrationTest`, `MemberManagementIntegrationTest`, `RoleManagementIntegrationTest` | PASS |
-| FLOW 3 | WARD_DEPUTY_SECRETARY CRUD member, role update rejected with 403 | `MemberManagementIntegrationTest`, `RoleManagementIntegrationTest` | PASS |
-| FLOW 4 | TDP_SECRETARY TDP 1 CRUD own TDP, read/update TDP 2 rejected with 403 | `MemberManagementIntegrationTest`, `OrganizationIntegrationTest`, `MemberBankingIntegrationTest` | PASS |
-| FLOW 5 | TDP_DEPUTY_SECRETARY has same scoped CRUD permissions as TDP_SECRETARY | `MemberManagementIntegrationTest` | PASS |
-| FLOW 6 | Admin create event, member view/vote, admin view participants | `EventIntegrationTest` | PASS |
-| FLOW 7 | TDP admin create activity report, upload image, member view published content | `PostIntegrationTest` | PASS |
-| FLOW 8 | Member A sends realtime chat to Member B; outsider subscribe/send rejected | `ChatIntegrationTest` | PASS |
-| FLOW 9 | Notification list, unread count, mark read | `NotificationIntegrationTest` | PASS |
-| FLOW 10 | TDP_SECRETARY views QR in own TDP, cross-TDP rejected with 403, WARD_SECRETARY can view ward-wide | `MemberBankingIntegrationTest` | PASS |
-
-## Security assertions exercised
-
-- JWT protected endpoints reject missing or invalid tokens.
-- Expired JWT is rejected.
-- Role escalation is rejected for WARD_DEPUTY_SECRETARY, TDP_SECRETARY, and MEMBER.
-- Only WARD_SECRETARY can assign roles.
-- Organization scope is enforced on member, organization, event, post, and banking endpoints.
-- TDP_SECRETARY from TDP 1 cannot access TDP 2 resources by ID.
-- MEMBER A cannot access MEMBER B profile or QR banking data.
-- Banking data is exposed only through banking endpoints, not default member list responses.
-- File upload validation covers accepted image types, invalid type, oversize, random server filename, and non-client storage path.
-- WebSocket handshake uses JWT identity; sender is derived from the token.
-- Non-members of a conversation cannot subscribe or send messages.
-- Error handling returns controlled HTTP status responses.
-
-## Changes made during this test pass
-
-No business logic was added or changed.
-
-Added integration regression tests:
-
-- `member-service/src/test/java/com/hcmcyu/member/MemberManagementIntegrationTest.java`
-  - `tdpDeputySecretaryCanCrudMemberInOwnTdpWithSameScopeAsTdpSecretary`
-- `chat-service/src/test/java/com/hcmcyu/chat/ChatIntegrationTest.java`
-  - `outsiderCannotSubscribeOrSendMessagesToConversation`
-
-## Notes
-
-- Tests run against service test configurations, including in-memory databases where configured.
-- Upload tests use local test storage.
-- Chat realtime tests use the Spring WebSocket/STOMP client.
-- No frontend code was created or modified for this test pass.
+- `data.standardFixture()`: một phường, hai TDP và một đoàn viên cho mỗi role.
+- `auth.as(member, request)`: gắn JWT của đoàn viên đó vào request.
+- `json(...)`, `body(result)`: tạo/đọc JSON.

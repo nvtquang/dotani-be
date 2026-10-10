@@ -62,7 +62,7 @@ Yêu cầu:
 Clone backend và frontend:
 
 ```powershell
-cd D:\Java
+cd D:\Projects\DOTANI
 git clone https://github.com/nvtquang/dotani-be.git 
 git clone https://github.com/nvtquang/dotani-fe.git 
 ```
@@ -70,7 +70,7 @@ git clone https://github.com/nvtquang/dotani-fe.git
 Tạo file môi trường:
 
 ```powershell
-cd D:\Java\HCMCYU
+cd D:\Projects\DOTANI\dotani-be
 Copy-Item .env.example .env
 notepad .env
 ```
@@ -83,9 +83,6 @@ DB_USERNAME=root
 DB_PASSWORD=your-local-db-password
 
 AUTH_JWT_SECRET=change-to-at-least-32-random-characters
-AUTH_INTERNAL_SECRET=change-me
-AUDIT_INTERNAL_SECRET=change-me
-NOTIFICATION_INTERNAL_SECRET=change-me
 
 DEV_WARD_SECRETARY_PASSWORD=Demo@12345
 
@@ -146,12 +143,12 @@ Một số tài khoản mẫu:
 
 | Username | Email | Role | Ghi chú |
 | --- | --- | --- | --- |
-| `admin` | `admin@hcmcyu.local` | `WARD_SECRETARY` | Tài khoản quyền cao nhất dev |
-| `ward.secretary` | `ward.secretary@hcmcyu.local` | `WARD_SECRETARY` | Bí thư phường |
-| `ward.deputy` | `ward.deputy@hcmcyu.local` | `WARD_DEPUTY_SECRETARY` | Phó bí thư phường |
-| `tdp1.secretary` | `tdp1.secretary@hcmcyu.local` | `TDP_SECRETARY` | Bí thư TDP 1 |
-| `tdp1.deputy` | `tdp1.deputy@hcmcyu.local` | `TDP_DEPUTY_SECRETARY` | Phó bí thư TDP 1 |
-| `tdp1.member1` | `tdp1.member1@hcmcyu.local` | `MEMBER` | Đoàn viên TDP 1 |
+| `admin` | `admin@dotani.local` | `WARD_SECRETARY` | Tài khoản quyền cao nhất dev |
+| `ward.secretary` | `ward.secretary@dotani.local` | `WARD_SECRETARY` | Bí thư phường |
+| `ward.deputy` | `ward.deputy@dotani.local` | `WARD_DEPUTY_SECRETARY` | Phó bí thư phường |
+| `tdp1.secretary` | `tdp1.secretary@dotani.local` | `TDP_SECRETARY` | Bí thư TDP 1 |
+| `tdp1.deputy` | `tdp1.deputy@dotani.local` | `TDP_DEPUTY_SECRETARY` | Phó bí thư TDP 1 |
+| `tdp1.member1` | `tdp1.member1@dotani.local` | `MEMBER` | Đoàn viên TDP 1 |
 
 Các TDP khác có cùng quy ước:
 
@@ -203,10 +200,10 @@ docker compose up --build -d auth-service
 docker compose up --build -d frontend
 ```
 
-Chạy test backend:
+Chạy test backend (cần MySQL có database `dotani_test`, xem [docs/backend-integration-test-report.md](docs/backend-integration-test-report.md)):
 
 ```powershell
-mvn test
+mvn clean verify
 ```
 
 ## Lưu ý
