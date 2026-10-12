@@ -5,7 +5,7 @@ spring:
   application:
     name: dotani-monolith
   datasource:
-    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:mysql://localhost:3306/dotani_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh}}
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:mysql://localhost:3306/dotani_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}}
     username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:root}}
     password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:root}}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -19,9 +19,16 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        default_batch_fetch_size: 50
+        # instants are stored as UTC in DATETIME(6) columns (V804)
+        jdbc:
+          time_zone: UTC
   flyway:
     enabled: ${SPRING_FLYWAY_ENABLED:true}
     baseline-on-migrate: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:false}
+    placeholders:
+      # zone the pre-V804 data was written in, see V804__store_times_as_utc_datetime.sql
+      legacy_time_zone: ${LEGACY_TIME_ZONE:+07:00}
   servlet:
     multipart:
       max-file-size: ${MAX_FILE_SIZE:10MB}
@@ -68,6 +75,10 @@ storage:
     max-group-avatar-size-bytes: ${STORAGE_CHAT_MAX_GROUP_AVATAR_SIZE_BYTES:2097152}
 
 app:
+  security:
+    # AES-256 key (base64, 32 bytes) encrypting bank account numbers. The default is for development only;
+    # the prod profile requires FIELD_ENCRYPTION_KEY. Losing the key makes stored account numbers unreadable.
+    field-encryption-key: ${FIELD_ENCRYPTION_KEY:+2Zi2hmwuJtvARq/BaAmF7/fGZ/Y3B0D/KrOAekuYLM=}
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:*,http://127.0.0.1:*}
 

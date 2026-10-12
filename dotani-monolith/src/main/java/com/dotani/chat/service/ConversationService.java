@@ -15,7 +15,7 @@ import com.dotani.chat.repository.ConversationMemberRepository;
 import com.dotani.chat.repository.ConversationRepository;
 import com.dotani.chat.repository.MessageRepository;
 import com.dotani.shared.security.CurrentUser;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -99,8 +99,8 @@ public class ConversationService {
                 ));
         // created_at is a whole-second column that MySQL rounds (10:00:00.6 is stored as 10:00:01), so a
         // message may look newer than "now". Never mark read earlier than the latest stored message.
-        LocalDateTime readAt = LocalDateTime.now();
-        LocalDateTime latestMessageAt = messageRepository.findTopByConversation_IdOrderByCreatedAtDesc(id)
+        Instant readAt = Instant.now();
+        Instant latestMessageAt = messageRepository.findTopByConversation_IdOrderByCreatedAtDesc(id)
                 .map(Message::getCreatedAt)
                 .orElse(null);
         if (latestMessageAt != null && latestMessageAt.isAfter(readAt)) {
@@ -222,7 +222,7 @@ public class ConversationService {
         );
     }
 
-    private LocalDateTime conversationSortTime(ConversationResponse conversation) {
+    private Instant conversationSortTime(ConversationResponse conversation) {
         if (conversation.lastMessageAt() != null) {
             return conversation.lastMessageAt();
         }

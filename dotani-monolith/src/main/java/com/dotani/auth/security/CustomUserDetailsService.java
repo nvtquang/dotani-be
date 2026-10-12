@@ -3,7 +3,6 @@ package com.dotani.auth.security;
 import com.dotani.auth.entity.UserAccount;
 import com.dotani.auth.repository.UserAccountRepository;
 import java.util.List;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -32,7 +31,8 @@ public class CustomUserDetailsService implements UserDetailsService {
                 true,
                 true,
                 true,
-                List.of(new SimpleGrantedAuthority("ROLE_" + account.getRole().name()))
+                // only used to check the password; roles come from the member profile when the token is issued
+                List.of()
         );
     }
 }

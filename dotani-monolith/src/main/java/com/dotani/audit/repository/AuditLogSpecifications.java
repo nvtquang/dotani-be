@@ -1,11 +1,12 @@
 package com.dotani.audit.repository;
 
+import com.dotani.shared.time.AppTime;
 import com.dotani.audit.entity.AuditAction;
 import com.dotani.audit.entity.AuditLog;
 import com.dotani.audit.entity.AuditResult;
 import com.dotani.audit.entity.ResourceType;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import org.springframework.data.jpa.domain.Specification;
 
 public final class AuditLogSpecifications {
@@ -45,8 +46,8 @@ public final class AuditLogSpecifications {
             if (date == null) {
                 return criteriaBuilder.conjunction();
             }
-            LocalDateTime start = date.atStartOfDay();
-            LocalDateTime end = date.plusDays(1).atStartOfDay();
+            Instant start = AppTime.startOfDay(date);
+            Instant end = AppTime.startOfNextDay(date);
             return criteriaBuilder.and(
                     criteriaBuilder.greaterThanOrEqualTo(root.get("timestamp"), start),
                     criteriaBuilder.lessThan(root.get("timestamp"), end)

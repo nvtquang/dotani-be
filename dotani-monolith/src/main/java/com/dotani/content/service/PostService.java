@@ -1,23 +1,27 @@
 package com.dotani.content.service;
 
+import com.dotani.shared.attachment.Attachment;
+import com.dotani.shared.attachment.AttachmentKind;
+import com.dotani.shared.attachment.AttachmentOwnerType;
+import com.dotani.shared.attachment.AttachmentRepository;
 import com.dotani.audit.entity.AuditAction;
 import com.dotani.audit.entity.ResourceType;
+import com.dotani.audit.service.AuditDiff;
 import com.dotani.audit.service.AuditLogService;
 
 import com.dotani.content.dto.PostRequest;
 import com.dotani.content.dto.PostResponse;
 import com.dotani.content.entity.Post;
-import com.dotani.content.entity.PostImage;
 import com.dotani.content.entity.PostType;
 import com.dotani.shared.exception.ApiException;
 import com.dotani.content.mapper.PostMapper;
-import com.dotani.content.repository.PostImageRepository;
 import com.dotani.content.repository.PostRepository;
 import com.dotani.content.repository.PostSpecifications;
 import com.dotani.shared.security.CurrentUser;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -30,7 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class PostService {
 
     private final PostRepository postRepository;
-    private final PostImageRepository postImageRepository;
+    private final AttachmentRepository attachmentRepository;
     private final PostMapper postMapper;
     private final PostScopeService postScopeService;
     private final StorageService storageService;
@@ -38,14 +42,14 @@ public class PostService {
 
     public PostService(
             PostRepository postRepository,
-            PostImageRepository postImageRepository,
+            AttachmentRepository attachmentRepository,
             PostMapper postMapper,
             PostScopeService postScopeService,
             StorageService storageService,
             AuditLogService auditLogService
     ) {
         this.postRepository = postRepository;
-        this.postImageRepository = postImageRepository;
+        this.attachmentRepository = attachmentRepository;
         this.postMapper = postMapper;
         this.postScopeService = postScopeService;
         this.storageService = storageService;
@@ -85,7 +89,8 @@ public class PostService {
                 ? currentUser.userId()
                 : currentUser.memberId());
         Post saved = postRepository.save(post);
-        auditLogService.record(currentUser, AuditAction.CREATE_POST, ResourceType.POST, saved.getId(), saved.getOrganizationId());
+        auditLogService.record(currentUser, AuditAction.CREATE_POST, ResourceType.POST, saved.getId(),
+                saved.getOrganizationId(), AuditDiff.created(auditSnapshot(saved)));
         return postMapper.toResponse(saved);
     }
 
@@ -94,8 +99,10 @@ public class PostService {
         Post post = getPost(id);
         postScopeService.requireManage(currentUser, post);
         postScopeService.requireManageRequest(currentUser, request.organizationId(), request.type());
+        Map<String, Object> before = auditSnapshot(post);
         postMapper.apply(post, request);
-        auditLogService.record(currentUser, AuditAction.UPDATE_POST, ResourceType.POST, post.getId(), post.getOrganizationId());
+        auditLogService.record(currentUser, AuditAction.UPDATE_POST, ResourceType.POST, post.getId(),
+                post.getOrganizationId(), AuditDiff.changes(before, auditSnapshot(post)));
         return postMapper.toResponse(post);
     }
 
@@ -103,10 +110,10 @@ public class PostService {
     public void delete(String id, CurrentUser currentUser) {
         Post post = getPost(id);
         postScopeService.requireManage(currentUser, post);
-        List<String> imageUrls = post.getImages().stream().map(PostImage::getImageUrl).toList();
-        auditLogService.record(currentUser, AuditAction.DELETE_POST, ResourceType.POST, post.getId(), post.getOrganizationId());
-        postRepository.delete(post);
-        imageUrls.forEach(storageService::delete);
+        auditLogService.record(currentUser, AuditAction.DELETE_POST, ResourceType.POST, post.getId(),
+                post.getOrganizationId(), AuditDiff.deleted(auditSnapshot(post)));
+        // soft delete: the post and its attachments stay in the database
+        post.markDeleted();
     }
 
     @Transactional
@@ -126,11 +133,16 @@ public class PostService {
             for (MultipartFile file : files) {
                 String imageUrl = storageService.storePostImage(file);
                 storedUrls.add(imageUrl);
-                PostImage image = new PostImage();
-                image.setImageUrl(imageUrl);
-                image.setAttachmentKind(storageService.attachmentKind(file));
-                image.setFileName(file.getOriginalFilename());
-                post.addImage(image);
+                post.addAttachment(Attachment.of(
+                        AttachmentOwnerType.POST,
+                        post.getId(),
+                        AttachmentKind.valueOf(storageService.attachmentKind(file)),
+                        imageUrl,
+                        file.getOriginalFilename(),
+                        file.getContentType(),
+                        file.getSize(),
+                        currentUser.memberId()
+                ));
             }
             return postMapper.toResponse(postRepository.saveAndFlush(post));
         } catch (RuntimeException exception) {
@@ -143,14 +155,14 @@ public class PostService {
     public void deleteImage(String postId, String imageId, CurrentUser currentUser) {
         Post post = getPost(postId);
         postScopeService.requireManage(currentUser, post);
-        PostImage image = postImageRepository.findByIdAndPost_Id(imageId, postId)
+        Attachment image = attachmentRepository.findByIdAndOwnerTypeAndOwnerId(imageId, AttachmentOwnerType.POST, postId)
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.NOT_FOUND,
                         "POST_IMAGE_NOT_FOUND",
                         "Post image not found"
                 ));
-        String imageUrl = image.getImageUrl();
-        post.removeImage(image);
+        String imageUrl = image.getUrl();
+        post.removeAttachment(image);
         storageService.delete(imageUrl);
     }
 
@@ -161,5 +173,14 @@ public class PostService {
                         "POST_NOT_FOUND",
                         "Post not found"
                 ));
+    }
+
+    private Map<String, Object> auditSnapshot(Post post) {
+        return AuditDiff.snapshot(
+                "title", post.getTitle(),
+                "type", post.getType(),
+                "status", post.getStatus(),
+                "organizationId", post.getOrganizationId()
+        );
     }
 }

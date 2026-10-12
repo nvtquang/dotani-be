@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record EventRequest(
         @NotBlank
@@ -22,12 +22,12 @@ public record EventRequest(
         String location,
 
         @NotNull
-        LocalDateTime startTime,
+        Instant startTime,
 
         @NotNull
-        LocalDateTime endTime,
+        Instant endTime,
 
-        LocalDateTime registrationDeadline,
+        Instant registrationDeadline,
 
         @NotBlank
         @Size(max = 36)

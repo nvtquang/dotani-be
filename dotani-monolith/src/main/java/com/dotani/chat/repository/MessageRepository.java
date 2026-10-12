@@ -1,7 +1,7 @@
 package com.dotani.chat.repository;
 
 import com.dotani.chat.entity.Message;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,7 +17,7 @@ public interface MessageRepository extends JpaRepository<Message, String> {
 
     long countByConversation_IdAndCreatedAtAfterAndSenderIdNot(
             String conversationId,
-            LocalDateTime createdAt,
+            Instant createdAt,
             String senderId
     );
 }

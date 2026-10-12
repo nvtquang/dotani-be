@@ -1,7 +1,7 @@
 package com.dotani.chat.dto;
 
 import com.dotani.chat.entity.ConversationType;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -13,10 +13,10 @@ public record ConversationResponse(
         String createdBy,
         List<String> memberIds,
         Map<String, String> memberNames,
-        LocalDateTime lastMessageAt,
+        Instant lastMessageAt,
         String lastMessagePreview,
         long unreadCount,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        Instant createdAt,
+        Instant updatedAt
 ) {
 }

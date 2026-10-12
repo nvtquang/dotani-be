@@ -1,5 +1,8 @@
 package com.dotani.member.repository;
 
+import com.dotani.auth.entity.UserAccount;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import com.dotani.member.entity.Member;
 import com.dotani.member.entity.MemberRole;
 import com.dotani.member.entity.MemberStatus;
@@ -17,10 +20,12 @@ public final class MemberSpecifications {
                 return criteriaBuilder.conjunction();
             }
             String pattern = "%" + keyword.trim().toLowerCase() + "%";
+            Join<Member, UserAccount> account = root.join("account", JoinType.LEFT);
             return criteriaBuilder.or(
                     criteriaBuilder.like(criteriaBuilder.lower(root.get("fullName")), pattern),
                     criteriaBuilder.like(criteriaBuilder.lower(root.get("phone")), pattern),
                     criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(account.get("email")), pattern),
                     criteriaBuilder.like(criteriaBuilder.lower(root.get("address")), pattern)
             );
         };

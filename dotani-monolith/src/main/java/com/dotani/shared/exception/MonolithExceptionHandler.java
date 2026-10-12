@@ -2,6 +2,7 @@ package com.dotani.shared.exception;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -56,6 +57,13 @@ public class MonolithExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException exception, WebRequest request) {
         return error(HttpStatus.FORBIDDEN, "FORBIDDEN", "Access denied", request, List.of());
+    }
+
+    // Safety net for constraint violations (foreign keys, unique keys) not caught by a business check.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException exception, WebRequest request) {
+        log.warn("Data integrity violation at {}: {}", path(request), exception.getMostSpecificCause().getMessage());
+        return error(HttpStatus.CONFLICT, "DATA_INTEGRITY_VIOLATION", "Request conflicts with existing data", request, List.of());
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

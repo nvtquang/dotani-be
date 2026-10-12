@@ -1,9 +1,10 @@
 package com.dotani.audit.dto;
 
+import java.util.Map;
 import com.dotani.audit.entity.AuditAction;
 import com.dotani.audit.entity.AuditResult;
 import com.dotani.audit.entity.ResourceType;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AuditLogResponse(
         String id,
@@ -13,7 +14,10 @@ public record AuditLogResponse(
         ResourceType resourceType,
         String resourceId,
         String organizationId,
-        LocalDateTime timestamp,
-        AuditResult result
+        Instant timestamp,
+        AuditResult result,
+        Map<String, Object> details,
+        String ip,
+        String userAgent
 ) {
 }

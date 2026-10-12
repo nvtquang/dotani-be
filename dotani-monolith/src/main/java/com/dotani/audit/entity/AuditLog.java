@@ -7,8 +7,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "audit_logs")
@@ -39,11 +42,22 @@ public class AuditLog {
     private String organizationId;
 
     @Column(name = "audit_timestamp", nullable = false)
-    private LocalDateTime timestamp;
+    private Instant timestamp;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private AuditResult result;
+
+    // Changed fields as {"field": {"before": ..., "after": ...}}; never contact or bank data.
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json")
+    private Map<String, Object> details;
+
+    @Column(length = 45)
+    private String ip;
+
+    @Column(name = "user_agent", length = 500)
+    private String userAgent;
 
     @PrePersist
     void prePersist() {
@@ -51,7 +65,7 @@ public class AuditLog {
             id = UUID.randomUUID().toString();
         }
         if (timestamp == null) {
-            timestamp = LocalDateTime.now();
+            timestamp = Instant.now();
         }
     }
 
@@ -107,7 +121,7 @@ public class AuditLog {
         this.organizationId = organizationId;
     }
 
-    public LocalDateTime getTimestamp() {
+    public Instant getTimestamp() {
         return timestamp;
     }
 
@@ -117,5 +131,29 @@ public class AuditLog {
 
     public void setResult(AuditResult result) {
         this.result = result;
+    }
+
+    public Map<String, Object> getDetails() {
+        return details;
+    }
+
+    public void setDetails(Map<String, Object> details) {
+        this.details = details;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
+
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
     }
 }

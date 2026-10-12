@@ -1,6 +1,5 @@
 package com.dotani.auth.entity;
 
-import com.dotani.shared.security.Role;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -37,18 +36,8 @@ public class UserAccount {
     @Column(name = "provider_subject")
     private String providerSubject;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
-    private Role role;
-
     @Column(name = "member_id", length = 36)
     private String memberId;
-
-    @Column(name = "organization_id", length = 36)
-    private String organizationId;
-
-    @Column(name = "tdp_id", length = 36)
-    private String tdpId;
 
     @Column(nullable = false)
     private boolean enabled = true;
@@ -122,36 +111,12 @@ public class UserAccount {
         this.providerSubject = providerSubject;
     }
 
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
-
     public String getMemberId() {
         return memberId;
     }
 
     public void setMemberId(String memberId) {
         this.memberId = memberId;
-    }
-
-    public String getOrganizationId() {
-        return organizationId;
-    }
-
-    public void setOrganizationId(String organizationId) {
-        this.organizationId = organizationId;
-    }
-
-    public String getTdpId() {
-        return tdpId;
-    }
-
-    public void setTdpId(String tdpId) {
-        this.tdpId = tdpId;
     }
 
     public boolean isEnabled() {

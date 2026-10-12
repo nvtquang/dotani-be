@@ -55,7 +55,7 @@ public class EventDashboardService {
                 : participationRepository.countByStatusScoped(ParticipationStatus.GOING, organizationScope);
 
         List<EventResponse> registeredEvents = currentUser.isMember() && currentUser.memberId() != null
-                ? participationRepository.findByMemberIdOrderByUpdatedAtDesc(currentUser.memberId())
+                ? participationRepository.findByMemberIdAndEvent_DeletedAtIsNullOrderByUpdatedAtDesc(currentUser.memberId())
                         .stream()
                         .map(participation -> eventMapper.toResponse(participation.getEvent()))
                         .limit(DASHBOARD_EVENT_LIMIT)

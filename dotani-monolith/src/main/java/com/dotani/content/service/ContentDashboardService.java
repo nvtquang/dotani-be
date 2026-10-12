@@ -1,5 +1,6 @@
 package com.dotani.content.service;
 
+import java.time.Duration;
 import com.dotani.content.dto.ContentDashboardSummaryResponse;
 import com.dotani.content.dto.PostResponse;
 import com.dotani.content.entity.PostStatus;
@@ -8,7 +9,7 @@ import com.dotani.content.mapper.PostMapper;
 import com.dotani.content.repository.PostRepository;
 import com.dotani.content.repository.PostSpecifications;
 import com.dotani.shared.security.CurrentUser;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -38,7 +39,7 @@ public class ContentDashboardService {
 
         long recentActivityReportCount = postRepository.count(visiblePublished
                 .and(PostSpecifications.hasType(PostType.ACTIVITY_REPORT))
-                .and(PostSpecifications.createdAfter(LocalDateTime.now().minusDays(RECENT_DAYS))));
+                .and(PostSpecifications.createdAfter(Instant.now().minus(Duration.ofDays(RECENT_DAYS)))));
 
         List<PostResponse> newPosts = postRepository.findAll(
                         visiblePublished,

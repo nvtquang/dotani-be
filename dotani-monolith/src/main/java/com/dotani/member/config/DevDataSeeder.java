@@ -1,5 +1,6 @@
 package com.dotani.member.config;
 
+import com.dotani.auth.repository.UserAccountRepository;
 import com.dotani.member.entity.Gender;
 import com.dotani.member.entity.Member;
 import com.dotani.member.entity.MemberRole;
@@ -11,23 +12,28 @@ import com.dotani.member.repository.OrganizationUnitRepository;
 import java.time.LocalDate;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Profile("dev")
+@Order(2)
 public class DevDataSeeder implements CommandLineRunner {
 
     private static final String WARD_ID = "ward-thuong-cat";
 
     private final OrganizationUnitRepository organizationUnitRepository;
     private final MemberRepository memberRepository;
+    private final UserAccountRepository userAccountRepository;
 
     public DevDataSeeder(
             OrganizationUnitRepository organizationUnitRepository,
-            MemberRepository memberRepository
+            MemberRepository memberRepository,
+            UserAccountRepository userAccountRepository
     ) {
         this.organizationUnitRepository = organizationUnitRepository;
         this.memberRepository = memberRepository;
+        this.userAccountRepository = userAccountRepository;
     }
 
     @Override
@@ -50,6 +56,22 @@ public class DevDataSeeder implements CommandLineRunner {
             seedTdpMembers(tdp, branch);
         }
         seedWardOfficers(organizationUnitRepository.findById("tdp-1").orElseThrow());
+        linkAccountsToMembers();
+    }
+
+    // Accounts are seeded first without a member (user_accounts.member_id references members).
+    private void linkAccountsToMembers() {
+        memberRepository.findAll().forEach(member -> {
+            if (member.getUserId() == null) {
+                return;
+            }
+            userAccountRepository.findById(member.getUserId())
+                    .filter(account -> account.getMemberId() == null)
+                    .ifPresent(account -> {
+                        account.setMemberId(member.getId());
+                        userAccountRepository.save(account);
+                    });
+        });
     }
 
     private OrganizationUnit seedOrganization(
@@ -149,7 +171,7 @@ public class DevDataSeeder implements CommandLineRunner {
             Gender gender,
             int sampleNumber
     ) {
-        if (memberRepository.existsById(id) || memberRepository.existsByUserId(userId)) {
+        if (memberRepository.existsAnyById(id) || memberRepository.existsAnyByUserId(userId)) {
             return;
         }
         Member member = new Member();
@@ -159,7 +181,7 @@ public class DevDataSeeder implements CommandLineRunner {
         member.setDateOfBirth(LocalDate.of(2000 + (sampleNumber % 6), ((sampleNumber % 12) + 1), 10));
         member.setGender(gender);
         member.setPhone("0900%06d".formatted(sampleNumber));
-        member.setEmail(email);
+        member.setEmail(userId == null ? email : null); // linked members use the account email
         member.setAddress("Phường Thượng Cát, Bắc Từ Liêm, Hà Nội");
         member.setYouthUnionJoinDate(LocalDate.of(2022, 3, 26));
         member.setMemberStatus(MemberStatus.ACTIVE);

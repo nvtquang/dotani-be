@@ -1,12 +1,13 @@
 package com.dotani.event.repository;
 
+import com.dotani.shared.time.AppTime;
 import com.dotani.event.entity.Event;
 import com.dotani.event.entity.EventStatus;
 import com.dotani.event.entity.EventType;
 import com.dotani.shared.security.CurrentUser;
 import com.dotani.shared.security.OrgScopePolicy;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import org.springframework.data.jpa.domain.Specification;
 
 public final class EventSpecifications {
@@ -40,8 +41,8 @@ public final class EventSpecifications {
             if (date == null) {
                 return criteriaBuilder.conjunction();
             }
-            LocalDateTime start = date.atStartOfDay();
-            LocalDateTime end = date.plusDays(1).atStartOfDay();
+            Instant start = AppTime.startOfDay(date);
+            Instant end = AppTime.startOfNextDay(date);
             return criteriaBuilder.and(
                     criteriaBuilder.greaterThanOrEqualTo(root.get("startTime"), start),
                     criteriaBuilder.lessThan(root.get("startTime"), end)
@@ -54,7 +55,7 @@ public final class EventSpecifications {
             if (upcoming == null || !upcoming) {
                 return criteriaBuilder.conjunction();
             }
-            return criteriaBuilder.greaterThanOrEqualTo(root.get("startTime"), LocalDateTime.now());
+            return criteriaBuilder.greaterThanOrEqualTo(root.get("startTime"), Instant.now());
         };
     }
 

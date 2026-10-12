@@ -30,7 +30,10 @@ public class AuditLogMapper {
                 auditLog.getResourceId(),
                 auditLog.getOrganizationId(),
                 auditLog.getTimestamp(),
-                auditLog.getResult()
+                auditLog.getResult(),
+                auditLog.getDetails(),
+                auditLog.getIp(),
+                auditLog.getUserAgent()
         );
     }
 }

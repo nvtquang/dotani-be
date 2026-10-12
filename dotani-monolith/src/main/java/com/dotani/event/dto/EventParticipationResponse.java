@@ -2,7 +2,7 @@ package com.dotani.event.dto;
 
 import com.dotani.event.entity.EventType;
 import com.dotani.event.entity.ParticipationStatus;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record EventParticipationResponse(
         String id,
@@ -10,11 +10,11 @@ public record EventParticipationResponse(
         String eventTitle,
         EventType eventType,
         String eventOrganizationId,
-        LocalDateTime eventStartTime,
-        LocalDateTime eventEndTime,
+        Instant eventStartTime,
+        Instant eventEndTime,
         String memberId,
         ParticipationStatus status,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        Instant createdAt,
+        Instant updatedAt
 ) {
 }

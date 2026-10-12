@@ -1,5 +1,12 @@
 package com.dotani.chat.entity;
 
+import com.dotani.shared.attachment.Attachment;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
+import java.util.ArrayList;
+import java.util.List;
+import org.hibernate.annotations.SQLRestriction;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,7 +17,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -31,31 +38,21 @@ public class Message {
     @Column(nullable = false, length = 2000)
     private String content;
 
-    @Column(name = "attachment_url", length = 500)
-    private String attachmentUrl;
-
-    @Column(name = "attachment_name", length = 255)
-    private String attachmentName;
-
-    @Column(name = "attachment_content_type", length = 120)
-    private String attachmentContentType;
-
-    @Column(name = "attachment_size")
-    private Long attachmentSize;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "attachment_kind", length = 20)
-    private AttachmentKind attachmentKind;
+    // A message carries at most one file; stored in the shared attachments table.
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "owner_id", insertable = false, updatable = false)
+    @SQLRestriction("owner_type = 'MESSAGE'")
+    private List<Attachment> attachments = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @PrePersist
     void prePersist() {
         if (id == null) {
             id = UUID.randomUUID().toString();
         }
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now();
     }
 
     public String getId() {
@@ -86,47 +83,16 @@ public class Message {
         this.content = content;
     }
 
-    public String getAttachmentUrl() {
-        return attachmentUrl;
+    public Attachment getAttachment() {
+        return attachments.isEmpty() ? null : attachments.get(0);
     }
 
-    public void setAttachmentUrl(String attachmentUrl) {
-        this.attachmentUrl = attachmentUrl;
+    public void setAttachment(Attachment attachment) {
+        attachments.clear();
+        attachments.add(attachment);
     }
 
-    public String getAttachmentName() {
-        return attachmentName;
-    }
-
-    public void setAttachmentName(String attachmentName) {
-        this.attachmentName = attachmentName;
-    }
-
-    public String getAttachmentContentType() {
-        return attachmentContentType;
-    }
-
-    public void setAttachmentContentType(String attachmentContentType) {
-        this.attachmentContentType = attachmentContentType;
-    }
-
-    public Long getAttachmentSize() {
-        return attachmentSize;
-    }
-
-    public void setAttachmentSize(Long attachmentSize) {
-        this.attachmentSize = attachmentSize;
-    }
-
-    public AttachmentKind getAttachmentKind() {
-        return attachmentKind;
-    }
-
-    public void setAttachmentKind(AttachmentKind attachmentKind) {
-        this.attachmentKind = attachmentKind;
-    }
-
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 }

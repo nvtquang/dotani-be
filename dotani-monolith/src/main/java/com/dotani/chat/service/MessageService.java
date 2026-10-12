@@ -1,5 +1,7 @@
 package com.dotani.chat.service;
 
+import com.dotani.shared.attachment.Attachment;
+import com.dotani.shared.attachment.AttachmentOwnerType;
 import com.dotani.member.service.MemberDirectoryService;
 
 import com.dotani.chat.dto.ChatMessageRequest;
@@ -96,12 +98,18 @@ public class MessageService {
         message.setConversation(conversation);
         message.setSenderId(senderId);
         message.setContent(storedFile.originalName());
-        message.setAttachmentUrl(storedFile.url());
-        message.setAttachmentName(storedFile.originalName());
-        message.setAttachmentContentType(storedFile.contentType());
-        message.setAttachmentSize(storedFile.size());
-        message.setAttachmentKind(storedFile.kind());
+        // persist first so the message id exists, then attach the file to it
         Message saved = messageRepository.save(message);
+        saved.setAttachment(Attachment.of(
+                AttachmentOwnerType.MESSAGE,
+                saved.getId(),
+                storedFile.kind(),
+                storedFile.url(),
+                storedFile.originalName(),
+                storedFile.contentType(),
+                storedFile.size(),
+                senderId
+        ));
         Map<String, String> senderNames = memberDirectoryService.findDisplayNames(List.of(senderId));
         return chatMapper.toResponse(saved, senderNames.get(senderId));
     }

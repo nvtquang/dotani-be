@@ -9,7 +9,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -34,17 +34,17 @@ public class UserNotification {
     private String memberId;
 
     @Column(name = "read_at")
-    private LocalDateTime readAt;
+    private Instant readAt;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @PrePersist
     void prePersist() {
         if (id == null) {
             id = UUID.randomUUID().toString();
         }
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now();
     }
 
     public String getId() {
@@ -67,17 +67,17 @@ public class UserNotification {
         this.memberId = memberId;
     }
 
-    public LocalDateTime getReadAt() {
+    public Instant getReadAt() {
         return readAt;
     }
 
     public void markRead() {
         if (readAt == null) {
-            readAt = LocalDateTime.now();
+            readAt = Instant.now();
         }
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 }

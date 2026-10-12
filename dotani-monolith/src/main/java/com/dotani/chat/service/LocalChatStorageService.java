@@ -1,6 +1,6 @@
 package com.dotani.chat.service;
 
-import com.dotani.chat.entity.AttachmentKind;
+import com.dotani.shared.attachment.AttachmentKind;
 import com.dotani.shared.exception.ApiException;
 import java.io.IOException;
 import java.nio.file.Files;

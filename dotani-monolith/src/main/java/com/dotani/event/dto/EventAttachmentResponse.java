@@ -1,12 +1,12 @@
 package com.dotani.event.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record EventAttachmentResponse(
         String id,
         String fileUrl,
         String attachmentKind,
         String fileName,
-        LocalDateTime createdAt
+        Instant createdAt
 ) {
 }

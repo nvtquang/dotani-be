@@ -1,5 +1,6 @@
 package com.dotani.content.repository;
 
+import com.dotani.shared.time.AppTime;
 import com.dotani.content.entity.Post;
 import com.dotani.content.entity.PostStatus;
 import com.dotani.content.entity.PostType;
@@ -7,7 +8,7 @@ import com.dotani.shared.security.CurrentUser;
 import com.dotani.shared.security.OrgScopePolicy;
 import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import org.springframework.data.jpa.domain.Specification;
 
 public final class PostSpecifications {
@@ -35,8 +36,8 @@ public final class PostSpecifications {
             if (date == null) {
                 return criteriaBuilder.conjunction();
             }
-            LocalDateTime start = date.atStartOfDay();
-            LocalDateTime end = date.plusDays(1).atStartOfDay();
+            Instant start = AppTime.startOfDay(date);
+            Instant end = AppTime.startOfNextDay(date);
             return criteriaBuilder.and(
                     criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), start),
                     criteriaBuilder.lessThan(root.get("createdAt"), end)
@@ -44,7 +45,7 @@ public final class PostSpecifications {
         };
     }
 
-    public static Specification<Post> createdAfter(LocalDateTime createdAfter) {
+    public static Specification<Post> createdAfter(Instant createdAfter) {
         return (root, query, criteriaBuilder) -> createdAfter == null
                 ? criteriaBuilder.conjunction()
                 : criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), createdAfter);

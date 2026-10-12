@@ -11,7 +11,7 @@ import com.dotani.event.mapper.EventParticipationMapper;
 import com.dotani.event.repository.EventParticipationRepository;
 import com.dotani.event.repository.EventRepository;
 import com.dotani.shared.security.CurrentUser;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -91,7 +91,7 @@ public class EventParticipationService {
     @Transactional(readOnly = true)
     public List<EventParticipationResponse> findCurrentMemberEvents(CurrentUser currentUser) {
         String memberId = requireMemberContext(currentUser);
-        return participationRepository.findByMemberIdOrderByUpdatedAtDesc(memberId)
+        return participationRepository.findByMemberIdAndEvent_DeletedAtIsNullOrderByUpdatedAtDesc(memberId)
                 .stream()
                 .filter(participation -> canReadParticipation(currentUser, participation))
                 .map(participationMapper::toResponse)
@@ -106,8 +106,8 @@ public class EventParticipationService {
     }
 
     private void validateRegistrationDeadline(Event event) {
-        LocalDateTime deadline = event.getRegistrationDeadline();
-        if (deadline != null && LocalDateTime.now().isAfter(deadline)) {
+        Instant deadline = event.getRegistrationDeadline();
+        if (deadline != null && Instant.now().isAfter(deadline)) {
             throw new ApiException(
                     HttpStatus.CONFLICT,
                     "REGISTRATION_DEADLINE_PASSED",

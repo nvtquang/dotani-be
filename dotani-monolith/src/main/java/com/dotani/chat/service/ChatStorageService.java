@@ -1,6 +1,6 @@
 package com.dotani.chat.service;
 
-import com.dotani.chat.entity.AttachmentKind;
+import com.dotani.shared.attachment.AttachmentKind;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface ChatStorageService {

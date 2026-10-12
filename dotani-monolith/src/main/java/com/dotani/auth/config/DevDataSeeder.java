@@ -8,14 +8,15 @@ import java.util.List;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 @Profile("dev")
+@Order(1)
 public class DevDataSeeder implements CommandLineRunner {
 
-    private static final String WARD_ID = "ward-thuong-cat";
 
     private final UserAccountRepository userAccountRepository;
     private final PasswordEncoder passwordEncoder;
@@ -48,10 +49,7 @@ public class DevDataSeeder implements CommandLineRunner {
                 });
 
         user.setPasswordHash(passwordEncoder.encode(demoPassword));
-        user.setRole(demoUser.role());
-        user.setMemberId(demoUser.memberId());
-        user.setOrganizationId(WARD_ID);
-        user.setTdpId(demoUser.tdpId());
+        // Role and scope live on the member profile; the member seeder links the account to its member.
         user.setEnabled(true);
         userAccountRepository.save(user);
     }

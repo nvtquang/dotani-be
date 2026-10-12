@@ -1,4 +1,4 @@
-package com.dotani.chat.entity;
+package com.dotani.shared.attachment;
 
 public enum AttachmentKind {
     IMAGE,

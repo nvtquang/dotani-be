@@ -3,6 +3,7 @@ package com.dotani.auth.service;
 import com.dotani.shared.security.Role;
 import com.dotani.auth.entity.UserAccount;
 import com.dotani.shared.exception.ApiException;
+import com.dotani.shared.security.AccessScope;
 import com.dotani.shared.security.CurrentUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -32,21 +33,21 @@ public class JwtService {
         this.accessTokenExpiration = Duration.ofMillis(accessTokenExpirationMs);
     }
 
-    public String createAccessToken(UserAccount user) {
+    public String createAccessToken(UserAccount user, AccessScope scope) {
         Instant now = Instant.now();
-        return createAccessToken(user, now, now.plus(accessTokenExpiration));
+        return createAccessToken(user, scope, now, now.plus(accessTokenExpiration));
     }
 
-    public String createAccessToken(UserAccount user, Instant issuedAt, Instant expiresAt) {
+    public String createAccessToken(UserAccount user, AccessScope scope, Instant issuedAt, Instant expiresAt) {
         return Jwts.builder()
                 .subject(user.getId())
                 .claim("userId", user.getId())
                 .claim("memberId", user.getMemberId())
                 .claim("username", user.getUsername())
                 .claim("email", user.getEmail())
-                .claim("role", user.getRole().name())
-                .claim("organizationId", user.getOrganizationId())
-                .claim("tdpId", user.getTdpId())
+                .claim("role", scope.role().name())
+                .claim("organizationId", scope.organizationId())
+                .claim("tdpId", scope.tdpId())
                 .issuedAt(Date.from(issuedAt))
                 .expiration(Date.from(expiresAt))
                 .signWith(secretKey)

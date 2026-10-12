@@ -8,12 +8,13 @@ import com.dotani.auth.dto.RefreshRequest;
 import com.dotani.auth.dto.RegisterRequest;
 import com.dotani.auth.dto.UserResponse;
 import com.dotani.auth.entity.AuthProvider;
-import com.dotani.shared.security.Role;
 import com.dotani.auth.entity.UserAccount;
 import com.dotani.shared.exception.ApiException;
 import com.dotani.auth.mapper.UserMapper;
 import com.dotani.auth.repository.UserAccountRepository;
+import com.dotani.member.service.MemberAccessService;
 import com.dotani.member.service.MemberRegistrationService;
+import com.dotani.shared.security.AccessScope;
 import com.dotani.member.service.MemberRegistrationService.RegisteredMember;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -33,6 +34,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final UserMapper userMapper;
     private final MemberRegistrationService memberRegistrationService;
+    private final MemberAccessService memberAccessService;
     private final GoogleTokenVerifier googleTokenVerifier;
 
     public AuthService(
@@ -43,6 +45,7 @@ public class AuthService {
             RefreshTokenService refreshTokenService,
             UserMapper userMapper,
             MemberRegistrationService memberRegistrationService,
+            MemberAccessService memberAccessService,
             GoogleTokenVerifier googleTokenVerifier
     ) {
         this.userAccountRepository = userAccountRepository;
@@ -52,6 +55,7 @@ public class AuthService {
         this.refreshTokenService = refreshTokenService;
         this.userMapper = userMapper;
         this.memberRegistrationService = memberRegistrationService;
+        this.memberAccessService = memberAccessService;
         this.googleTokenVerifier = googleTokenVerifier;
     }
 
@@ -71,14 +75,12 @@ public class AuthService {
         user.setUsername(username);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRole(Role.MEMBER);
         user.setEnabled(true);
 
         UserAccount savedUser = userAccountRepository.saveAndFlush(user);
         RegisteredMember member = memberRegistrationService.register(
                 savedUser.getId(),
                 request.fullName(),
-                savedUser.getEmail(),
                 request.phone(),
                 request.dateOfBirth(),
                 request.organizationId()
@@ -123,9 +125,6 @@ public class AuthService {
         if (user.getProviderSubject() == null || user.getProviderSubject().isBlank()) {
             user.setProviderSubject(googleUser.subject());
         }
-        if (user.getRole() == null) {
-            user.setRole(Role.MEMBER);
-        }
         user.setEnabled(true);
 
         UserAccount savedUser = userAccountRepository.saveAndFlush(user);
@@ -133,8 +132,7 @@ public class AuthService {
             RegisteredMember member = memberRegistrationService.register(
                     savedUser.getId(),
                     request.fullName(),
-                    savedUser.getEmail(),
-                    request.phone(),
+                        request.phone(),
                     request.dateOfBirth(),
                     request.organizationId()
             );
@@ -160,16 +158,17 @@ public class AuthService {
     public UserResponse me(String userId) {
         UserAccount user = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found"));
-        return userMapper.toResponse(user);
+        return userMapper.toResponse(user, memberAccessService.scopeOf(user.getMemberId()));
     }
 
     private AuthResponse buildAuthResponse(UserAccount user, String refreshToken) {
+        AccessScope scope = memberAccessService.scopeOf(user.getMemberId());
         return new AuthResponse(
-                jwtService.createAccessToken(user),
+                jwtService.createAccessToken(user, scope),
                 refreshToken,
                 "Bearer",
                 jwtService.getAccessTokenExpirationMs(),
-                userMapper.toResponse(user)
+                userMapper.toResponse(user, scope)
         );
     }
 
@@ -180,7 +179,6 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
         user.setAuthProvider(AuthProvider.GOOGLE);
         user.setProviderSubject(googleUser.subject());
-        user.setRole(Role.MEMBER);
         user.setEnabled(true);
         return user;
     }
@@ -205,10 +203,7 @@ public class AuthService {
     private ApiException invalidCredentials() {
         return new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid username/email or password");
     }
-    // Same scope shape as seeded accounts: organizationId is the ward, tdpId the member's TDP.
     private void linkMember(UserAccount user, RegisteredMember member) {
         user.setMemberId(member.memberId());
-        user.setOrganizationId(member.wardId());
-        user.setTdpId(member.tdpId());
     }
 }

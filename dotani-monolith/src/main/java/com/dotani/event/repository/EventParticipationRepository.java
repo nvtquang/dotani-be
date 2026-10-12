@@ -14,7 +14,8 @@ public interface EventParticipationRepository extends JpaRepository<EventPartici
 
     List<EventParticipation> findByEvent_IdOrderByUpdatedAtDesc(String eventId);
 
-    List<EventParticipation> findByMemberIdOrderByUpdatedAtDesc(String memberId);
+    // excludes participations in deleted events
+    List<EventParticipation> findByMemberIdAndEvent_DeletedAtIsNullOrderByUpdatedAtDesc(String memberId);
 
     long countByEvent_IdAndStatus(String eventId, ParticipationStatus status);
 

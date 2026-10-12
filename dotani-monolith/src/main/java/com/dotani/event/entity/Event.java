@@ -1,5 +1,9 @@
 package com.dotani.event.entity;
 
+import com.dotani.shared.attachment.Attachment;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderBy;
+import org.hibernate.annotations.SQLRestriction;
 import jakarta.persistence.Column;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
@@ -10,11 +14,13 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+// Soft-deleted rows (deleted_at set) are invisible to every JPA query on this entity.
+@SQLRestriction("deleted_at IS NULL")
 @Entity
 @Table(name = "events")
 public class Event {
@@ -36,13 +42,13 @@ public class Event {
     private String location;
 
     @Column(name = "start_time", nullable = false)
-    private LocalDateTime startTime;
+    private Instant startTime;
 
     @Column(name = "end_time", nullable = false)
-    private LocalDateTime endTime;
+    private Instant endTime;
 
     @Column(name = "registration_deadline")
-    private LocalDateTime registrationDeadline;
+    private Instant registrationDeadline;
 
     @Column(name = "organization_id", nullable = false, length = 36)
     private String organizationId;
@@ -58,27 +64,34 @@ public class Event {
     private String createdBy;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
-    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<EventAttachment> attachments = new ArrayList<>();
+    // Attachments live in the shared attachments table, keyed by owner_type/owner_id.
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "owner_id", insertable = false, updatable = false)
+    @SQLRestriction("owner_type = 'EVENT'")
+    @OrderBy("createdAt")
+    private List<Attachment> attachments = new ArrayList<>();
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     @PrePersist
     void prePersist() {
         if (id == null) {
             id = UUID.randomUUID().toString();
         }
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
     void preUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now();
     }
 
     public String getId() {
@@ -117,27 +130,27 @@ public class Event {
         this.location = location;
     }
 
-    public LocalDateTime getStartTime() {
+    public Instant getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(LocalDateTime startTime) {
+    public void setStartTime(Instant startTime) {
         this.startTime = startTime;
     }
 
-    public LocalDateTime getEndTime() {
+    public Instant getEndTime() {
         return endTime;
     }
 
-    public void setEndTime(LocalDateTime endTime) {
+    public void setEndTime(Instant endTime) {
         this.endTime = endTime;
     }
 
-    public LocalDateTime getRegistrationDeadline() {
+    public Instant getRegistrationDeadline() {
         return registrationDeadline;
     }
 
-    public void setRegistrationDeadline(LocalDateTime registrationDeadline) {
+    public void setRegistrationDeadline(Instant registrationDeadline) {
         this.registrationDeadline = registrationDeadline;
     }
 
@@ -173,25 +186,33 @@ public class Event {
         this.createdBy = createdBy;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public List<EventAttachment> getAttachments() {
+    public List<Attachment> getAttachments() {
         return attachments;
     }
 
-    public void addAttachment(EventAttachment attachment) {
+    public void addAttachment(Attachment attachment) {
         attachments.add(attachment);
-        attachment.setEvent(this);
     }
 
-    public void removeAttachment(EventAttachment attachment) {
+    public void removeAttachment(Attachment attachment) {
         attachments.remove(attachment);
-        attachment.setEvent(null);
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void markDeleted() {
+        if (deletedAt == null) {
+            deletedAt = Instant.now();
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.dotani.event.service;
 
 import com.dotani.event.entity.Event;
+import com.dotani.member.service.OrganizationDirectory;
 import com.dotani.shared.security.CurrentUser;
 import com.dotani.shared.security.OrgScopePolicy;
 import org.springframework.stereotype.Service;
@@ -8,6 +9,12 @@ import org.springframework.stereotype.Service;
 /** Event rules: anyone in scope can read; only ward officers create and manage events. */
 @Service
 public class EventScopeService {
+
+    private final OrganizationDirectory organizationDirectory;
+
+    public EventScopeService(OrganizationDirectory organizationDirectory) {
+        this.organizationDirectory = organizationDirectory;
+    }
 
     private static final String OUT_OF_SCOPE = "Current user cannot access this event";
 
@@ -25,6 +32,7 @@ public class EventScopeService {
         if (!canWrite(currentUser, organizationId)) {
             throw OrgScopePolicy.outOfScope(OUT_OF_SCOPE);
         }
+        organizationDirectory.requireExists(organizationId);
     }
 
     public boolean canWrite(CurrentUser currentUser, String organizationId) {

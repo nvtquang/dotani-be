@@ -1,9 +1,11 @@
 package com.dotani.member.service;
 
-import com.dotani.auth.service.UserRoleService;
+import com.dotani.auth.entity.UserAccount;
+import com.dotani.auth.repository.UserAccountRepository;
 
 import com.dotani.audit.entity.AuditAction;
 import com.dotani.audit.entity.ResourceType;
+import com.dotani.audit.service.AuditDiff;
 import com.dotani.audit.service.AuditLogService;
 
 import com.dotani.member.dto.MemberBankingRequest;
@@ -38,6 +40,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -49,7 +52,7 @@ public class MemberService {
     private final MemberRoleChangeAuditRepository memberRoleChangeAuditRepository;
     private final MemberMapper memberMapper;
     private final MemberScopeService memberScopeService;
-    private final UserRoleService userRoleService;
+    private final UserAccountRepository userAccountRepository;
     private final AuditLogService auditLogService;
     private final StorageService storageService;
 
@@ -59,7 +62,7 @@ public class MemberService {
             MemberRoleChangeAuditRepository memberRoleChangeAuditRepository,
             MemberMapper memberMapper,
             MemberScopeService memberScopeService,
-            UserRoleService userRoleService,
+            UserAccountRepository userAccountRepository,
             AuditLogService auditLogService,
             StorageService storageService
     ) {
@@ -68,7 +71,7 @@ public class MemberService {
         this.memberRoleChangeAuditRepository = memberRoleChangeAuditRepository;
         this.memberMapper = memberMapper;
         this.memberScopeService = memberScopeService;
-        this.userRoleService = userRoleService;
+        this.userAccountRepository = userAccountRepository;
         this.auditLogService = auditLogService;
         this.storageService = storageService;
     }
@@ -165,7 +168,8 @@ public class MemberService {
         member.setMemberRole(MemberRole.MEMBER);
 
         Member saved = memberRepository.save(member);
-        auditLogService.record(currentUser, AuditAction.CREATE_MEMBER, ResourceType.MEMBER, saved.getId(), saved.getOrganization().getId());
+        auditLogService.record(currentUser, AuditAction.CREATE_MEMBER, ResourceType.MEMBER, saved.getId(),
+                saved.getOrganization().getId(), AuditDiff.created(auditSnapshot(saved)));
         return memberMapper.toResponse(saved);
     }
 
@@ -175,6 +179,7 @@ public class MemberService {
         memberScopeService.requireWrite(currentUser, member);
         validateUniqueUserIdForUpdate(request.userId(), id);
         String oldOrganizationId = member.getOrganization().getId();
+        Map<String, Object> before = auditSnapshot(member);
 
         OrganizationUnit organization = getOrganization(request.organizationId());
         validateMemberOrganization(organization);
@@ -182,9 +187,13 @@ public class MemberService {
 
         applyRequest(member, request, organization);
         memberScopeService.requireWrite(currentUser, member);
-        auditLogService.record(currentUser, AuditAction.UPDATE_MEMBER, ResourceType.MEMBER, member.getId(), member.getOrganization().getId());
+        auditLogService.record(currentUser, AuditAction.UPDATE_MEMBER, ResourceType.MEMBER, member.getId(),
+                member.getOrganization().getId(), AuditDiff.changes(before, auditSnapshot(member)));
         if (!oldOrganizationId.equals(organization.getId())) {
-            auditLogService.record(currentUser, AuditAction.CHANGE_ORGANIZATION, ResourceType.MEMBER, member.getId(), member.getOrganization().getId());
+            auditLogService.record(currentUser, AuditAction.CHANGE_ORGANIZATION, ResourceType.MEMBER, member.getId(),
+                    member.getOrganization().getId(),
+                    AuditDiff.changes(AuditDiff.snapshot("organizationId", oldOrganizationId),
+                            AuditDiff.snapshot("organizationId", organization.getId())));
         }
         return memberMapper.toResponse(member);
     }
@@ -196,7 +205,7 @@ public class MemberService {
         member.setDateOfBirth(request.dateOfBirth());
         member.setGender(request.gender());
         member.setPhone(blankToNull(request.phone()));
-        member.setEmail(request.email() == null ? null : request.email().trim().toLowerCase());
+        applyEmail(member, request.email());
         member.setAddress(blankToNull(request.address()));
         return memberMapper.toResponse(member);
     }
@@ -215,8 +224,10 @@ public class MemberService {
     public void softDelete(String id, CurrentUser currentUser) {
         Member member = getMember(id);
         memberScopeService.requireWrite(currentUser, member);
-        member.setMemberStatus(MemberStatus.INACTIVE);
-        auditLogService.record(currentUser, AuditAction.DISABLE_MEMBER, ResourceType.MEMBER, member.getId(), member.getOrganization().getId());
+        // soft delete: hidden from every query and unable to sign in, but kept for history (messages, posts)
+        member.markDeleted();
+        auditLogService.record(currentUser, AuditAction.DISABLE_MEMBER, ResourceType.MEMBER, member.getId(),
+                member.getOrganization().getId(), AuditDiff.deleted(auditSnapshot(member)));
     }
 
     @Transactional
@@ -232,10 +243,10 @@ public class MemberService {
         if (oldRole != newRole) {
             member.setMemberRole(newRole);
             auditRoleChange(member, oldRole, newRole, currentUser);
-            auditLogService.record(currentUser, AuditAction.CHANGE_ROLE, ResourceType.MEMBER, member.getId(), member.getOrganization().getId());
-            if (member.getUserId() != null) {
-                userRoleService.updateRole(member.getUserId(), Role.valueOf(newRole.name()));
-            }
+            auditLogService.record(currentUser, AuditAction.CHANGE_ROLE, ResourceType.MEMBER, member.getId(),
+                    member.getOrganization().getId(),
+                    AuditDiff.changes(AuditDiff.snapshot("memberRole", oldRole), AuditDiff.snapshot("memberRole", newRole)));
+            // The member row is the only place a role is stored; the next token issued for the account picks it up.
         }
 
         return memberMapper.toResponse(member);
@@ -277,13 +288,45 @@ public class MemberService {
         storageService.delete(oldQrUrl);
     }
 
+    // Fields recorded in audit details. Contact data (phone, email, address) and bank data are left out.
+    private Map<String, Object> auditSnapshot(Member member) {
+        return AuditDiff.snapshot(
+                "fullName", member.getFullName(),
+                "organizationId", member.getOrganization().getId(),
+                "memberStatus", member.getMemberStatus(),
+                "memberRole", member.getMemberRole(),
+                "userId", member.getUserId(),
+                "youthUnionJoinDate", member.getYouthUnionJoinDate()
+        );
+    }
+
+    // An email is stored once: on the login account for linked members, on the member otherwise.
+    private void applyEmail(Member member, String requestedEmail) {
+        String email = blankToNull(requestedEmail) == null ? null : requestedEmail.trim().toLowerCase();
+        if (member.getUserId() == null) {
+            member.setEmail(email);
+            return;
+        }
+        member.setEmail(null);
+        if (email == null) {
+            return; // a login email cannot be removed
+        }
+        UserAccount account = userAccountRepository.findById(member.getUserId()).orElseThrow();
+        if (!email.equals(account.getEmail())) {
+            if (userAccountRepository.existsByEmail(email)) {
+                throw new ApiException(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", "Email is already used by another account");
+            }
+            account.setEmail(email);
+        }
+    }
+
     private void applyRequest(Member member, MemberRequest request, OrganizationUnit organization) {
         member.setUserId(blankToNull(request.userId()));
         member.setFullName(request.fullName().trim());
         member.setDateOfBirth(request.dateOfBirth());
         member.setGender(request.gender());
         member.setPhone(blankToNull(request.phone()));
-        member.setEmail(request.email() == null ? null : request.email().trim().toLowerCase());
+        applyEmail(member, request.email());
         member.setAddress(blankToNull(request.address()));
         member.setAvatarUrl(blankToNull(request.avatarUrl()));
         member.setYouthUnionJoinDate(request.youthUnionJoinDate());
@@ -396,15 +439,24 @@ public class MemberService {
 
     private void validateUniqueUserIdForCreate(String userId) {
         String normalizedUserId = blankToNull(userId);
-        if (normalizedUserId != null && memberRepository.existsByUserId(normalizedUserId)) {
+        requireExistingAccount(normalizedUserId);
+        if (normalizedUserId != null && memberRepository.existsAnyByUserId(normalizedUserId)) {
             throw duplicateUserId();
         }
     }
 
     private void validateUniqueUserIdForUpdate(String userId, String memberId) {
         String normalizedUserId = blankToNull(userId);
-        if (normalizedUserId != null && memberRepository.existsByUserIdAndIdNot(normalizedUserId, memberId)) {
+        requireExistingAccount(normalizedUserId);
+        if (normalizedUserId != null && memberRepository.existsAnyByUserIdAndIdNot(normalizedUserId, memberId)) {
             throw duplicateUserId();
+        }
+    }
+
+    // members.user_id references user_accounts: a profile can only be linked to an existing login account.
+    private void requireExistingAccount(String userId) {
+        if (userId != null && !userAccountRepository.existsById(userId)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "USER_ACCOUNT_NOT_FOUND", "No login account exists with this userId");
         }
     }
 

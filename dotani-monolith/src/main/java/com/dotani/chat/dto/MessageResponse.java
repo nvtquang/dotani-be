@@ -1,7 +1,7 @@
 package com.dotani.chat.dto;
 
-import com.dotani.chat.entity.AttachmentKind;
-import java.time.LocalDateTime;
+import com.dotani.shared.attachment.AttachmentKind;
+import java.time.Instant;
 
 public record MessageResponse(
         String id,
@@ -14,6 +14,6 @@ public record MessageResponse(
         String attachmentContentType,
         Long attachmentSize,
         AttachmentKind attachmentKind,
-        LocalDateTime createdAt
+        Instant createdAt
 ) {
 }

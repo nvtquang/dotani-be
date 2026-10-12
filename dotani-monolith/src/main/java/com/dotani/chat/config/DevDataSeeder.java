@@ -8,10 +8,12 @@ import com.dotani.chat.repository.ConversationRepository;
 import com.dotani.chat.repository.MessageRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Profile("dev")
+@Order(3)
 public class DevDataSeeder implements CommandLineRunner {
 
     private final ConversationRepository conversationRepository;

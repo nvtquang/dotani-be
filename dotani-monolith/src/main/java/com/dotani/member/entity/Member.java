@@ -1,6 +1,10 @@
 package com.dotani.member.entity;
 
+import org.hibernate.annotations.SQLRestriction;
+import com.dotani.auth.entity.UserAccount;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -15,6 +19,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+// Soft-deleted rows (deleted_at set) are invisible to every JPA query on this entity.
+@SQLRestriction("deleted_at IS NULL")
 @Entity
 @Table(name = "members")
 public class Member {
@@ -39,8 +45,15 @@ public class Member {
     @Column(length = 30)
     private String phone;
 
+    // Contact email for members without a login account. Linked members use the account's email
+    // ; this column then stays null so an email is never stored twice.
     @Column(length = 255)
     private String email;
+
+    // Read-only view of the login account referenced by user_id, used to search by login email.
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private UserAccount account;
 
     @Column(length = 500)
     private String address;
@@ -48,20 +61,9 @@ public class Member {
     @Column(name = "avatar_url", length = 1000)
     private String avatarUrl;
 
-    @Column(name = "bank_name")
-    private String bankName;
-
-    @Column(name = "bank_code", length = 50)
-    private String bankCode;
-
-    @Column(name = "account_number", length = 50)
-    private String accountNumber;
-
-    @Column(name = "account_holder_name")
-    private String accountHolderName;
-
-    @Column(name = "bank_qr_image_url", length = 1000)
-    private String bankQrImageUrl;
+    // Bank details live in member_banking; the accessors below read and write through it.
+    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    private MemberBanking banking;
 
     @Column(name = "youth_union_join_date")
     private LocalDate youthUnionJoinDate;
@@ -83,6 +85,9 @@ public class Member {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     @PrePersist
     void prePersist() {
@@ -151,6 +156,7 @@ public class Member {
         return email;
     }
 
+
     public void setEmail(String email) {
         this.email = email;
     }
@@ -172,43 +178,58 @@ public class Member {
     }
 
     public String getBankName() {
-        return bankName;
+        return banking == null ? null : banking.getBankName();
     }
 
     public void setBankName(String bankName) {
-        this.bankName = bankName;
+        if (bankName == null && banking == null) {
+            return;
+        }
+        banking().setBankName(bankName);
     }
 
     public String getBankCode() {
-        return bankCode;
+        return banking == null ? null : banking.getBankCode();
     }
 
     public void setBankCode(String bankCode) {
-        this.bankCode = bankCode;
+        if (bankCode == null && banking == null) {
+            return;
+        }
+        banking().setBankCode(bankCode);
     }
 
     public String getAccountNumber() {
-        return accountNumber;
+        return banking == null ? null : banking.getAccountNumber();
     }
 
     public void setAccountNumber(String accountNumber) {
-        this.accountNumber = accountNumber;
+        if (accountNumber == null && banking == null) {
+            return;
+        }
+        banking().setAccountNumber(accountNumber);
     }
 
     public String getAccountHolderName() {
-        return accountHolderName;
+        return banking == null ? null : banking.getAccountHolderName();
     }
 
     public void setAccountHolderName(String accountHolderName) {
-        this.accountHolderName = accountHolderName;
+        if (accountHolderName == null && banking == null) {
+            return;
+        }
+        banking().setAccountHolderName(accountHolderName);
     }
 
     public String getBankQrImageUrl() {
-        return bankQrImageUrl;
+        return banking == null ? null : banking.getBankQrImageUrl();
     }
 
     public void setBankQrImageUrl(String bankQrImageUrl) {
-        this.bankQrImageUrl = bankQrImageUrl;
+        if (bankQrImageUrl == null && banking == null) {
+            return;
+        }
+        banking().setBankQrImageUrl(bankQrImageUrl);
     }
 
     public LocalDate getYouthUnionJoinDate() {
@@ -249,5 +270,22 @@ public class Member {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    private MemberBanking banking() {
+        if (banking == null) {
+            banking = new MemberBanking(this);
+        }
+        return banking;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void markDeleted() {
+        if (deletedAt == null) {
+            deletedAt = Instant.now();
+        }
     }
 }

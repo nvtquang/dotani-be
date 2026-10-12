@@ -18,12 +18,12 @@ public class PostMapper {
                 post.getOrganizationId(),
                 post.getAuthorId(),
                 post.getStatus(),
-                post.getImages().stream()
+                post.getAttachments().stream()
                         .map(image -> new PostImageResponse(
                                 image.getId(),
-                                image.getImageUrl(),
-                                image.getAttachmentKind(),
-                                image.getFileName(),
+                                image.getUrl(),
+                                image.getKind().name(),
+                                image.getName(),
                                 image.getCreatedAt()
                         ))
                         .toList(),

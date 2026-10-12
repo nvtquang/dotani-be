@@ -1,6 +1,5 @@
 package com.dotani.member.service;
 
-import com.dotani.member.entity.Member;
 import com.dotani.member.repository.MemberRepository;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -29,7 +28,8 @@ public class MemberDirectoryService {
         if (ids.isEmpty()) {
             return Map.of();
         }
-        return memberRepository.findAllById(ids).stream()
-                .collect(Collectors.toMap(Member::getId, Member::getFullName, (left, right) -> left));
+        // includes deleted members so old messages still show who sent them
+        return memberRepository.findNamesIncludingDeleted(ids).stream()
+                .collect(Collectors.toMap(row -> (String) row[0], row -> (String) row[1], (left, right) -> left));
     }
 }

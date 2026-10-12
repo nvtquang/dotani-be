@@ -1,5 +1,9 @@
 package com.dotani.content.entity;
 
+import com.dotani.shared.attachment.Attachment;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderBy;
+import org.hibernate.annotations.SQLRestriction;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,11 +14,13 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+// Soft-deleted rows (deleted_at set) are invisible to every JPA query on this entity.
+@SQLRestriction("deleted_at IS NULL")
 @Entity
 @Table(name = "posts")
 public class Post {
@@ -43,28 +49,35 @@ public class Post {
     @Column(nullable = false, length = 30)
     private PostStatus status;
 
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PostImage> images = new ArrayList<>();
+    // Attachments live in the shared attachments table, keyed by owner_type/owner_id.
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "owner_id", insertable = false, updatable = false)
+    @SQLRestriction("owner_type = 'POST'")
+    @OrderBy("createdAt")
+    private List<Attachment> attachments = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     @PrePersist
     void prePersist() {
         if (id == null) {
             id = UUID.randomUUID().toString();
         }
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
     void preUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now();
     }
 
     public String getId() {
@@ -119,25 +132,33 @@ public class Post {
         this.status = status;
     }
 
-    public List<PostImage> getImages() {
-        return images;
+    public List<Attachment> getAttachments() {
+        return attachments;
     }
 
-    public void addImage(PostImage image) {
-        images.add(image);
-        image.setPost(this);
+    public void addAttachment(Attachment attachment) {
+        attachments.add(attachment);
     }
 
-    public void removeImage(PostImage image) {
-        images.remove(image);
-        image.setPost(null);
+    public void removeAttachment(Attachment attachment) {
+        attachments.remove(attachment);
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void markDeleted() {
+        if (deletedAt == null) {
+            deletedAt = Instant.now();
+        }
     }
 }

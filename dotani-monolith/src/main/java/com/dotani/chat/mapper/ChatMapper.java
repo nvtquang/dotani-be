@@ -1,10 +1,11 @@
 package com.dotani.chat.mapper;
 
+import com.dotani.shared.attachment.Attachment;
 import com.dotani.chat.dto.ConversationResponse;
 import com.dotani.chat.dto.MessageResponse;
 import com.dotani.chat.entity.Conversation;
 import com.dotani.chat.entity.Message;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +23,7 @@ public class ChatMapper {
     public ConversationResponse toResponse(
             Conversation conversation,
             Map<String, String> memberNames,
-            LocalDateTime lastMessageAt,
+            Instant lastMessageAt,
             String lastMessagePreview,
             long unreadCount
     ) {
@@ -50,17 +51,18 @@ public class ChatMapper {
     }
 
     public MessageResponse toResponse(Message message, String senderName) {
+        Attachment attachment = message.getAttachment();
         return new MessageResponse(
                 message.getId(),
                 message.getConversation().getId(),
                 message.getSenderId(),
                 senderName,
                 message.getContent(),
-                message.getAttachmentUrl(),
-                message.getAttachmentName(),
-                message.getAttachmentContentType(),
-                message.getAttachmentSize(),
-                message.getAttachmentKind(),
+                attachment == null ? null : attachment.getUrl(),
+                attachment == null ? null : attachment.getName(),
+                attachment == null ? null : attachment.getMime(),
+                attachment == null ? null : attachment.getSize(),
+                attachment == null ? null : attachment.getKind(),
                 message.getCreatedAt()
         );
     }

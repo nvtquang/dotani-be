@@ -39,12 +39,11 @@ public class MemberRegistrationService {
     public RegisteredMember register(
             String userId,
             String fullName,
-            String email,
             String phone,
             LocalDate dateOfBirth,
             String organizationId
     ) {
-        if (memberRepository.existsByUserId(userId)) {
+        if (memberRepository.existsAnyByUserId(userId)) {
             throw new ApiException(HttpStatus.CONFLICT, "DUPLICATE_MEMBER_USER_ID", "Member userId already exists");
         }
 
@@ -65,7 +64,7 @@ public class MemberRegistrationService {
         Member member = new Member();
         member.setUserId(userId);
         member.setFullName(fullName.trim());
-        member.setEmail(email == null ? null : email.trim().toLowerCase());
+        // the email lives on the login account (user_accounts.email)
         member.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
         member.setDateOfBirth(dateOfBirth);
         member.setOrganization(organization);

@@ -25,9 +25,9 @@ public class EventMapper {
                 event.getAttachments().stream()
                         .map(attachment -> new com.dotani.event.dto.EventAttachmentResponse(
                                 attachment.getId(),
-                                attachment.getFileUrl(),
-                                attachment.getAttachmentKind(),
-                                attachment.getFileName(),
+                                attachment.getUrl(),
+                                attachment.getKind().name(),
+                                attachment.getName(),
                                 attachment.getCreatedAt()
                         ))
                         .toList(),

@@ -15,6 +15,32 @@ public interface MemberRepository extends JpaRepository<Member, String>, JpaSpec
 
     boolean existsByUserId(String userId);
 
+    // Native queries see soft-deleted members too (ids and user ids stay taken after deletion).
+    @Query(value = "select count(*) from members where id = :id", nativeQuery = true)
+    long countAnyById(@Param("id") String id);
+
+    @Query(value = "select count(*) from members where user_id = :userId", nativeQuery = true)
+    long countAnyByUserId(@Param("userId") String userId);
+
+    @Query(value = "select count(*) from members where user_id = :userId and id <> :id", nativeQuery = true)
+    long countAnyByUserIdAndIdNot(@Param("userId") String userId, @Param("id") String id);
+
+    default boolean existsAnyById(String id) {
+        return countAnyById(id) > 0;
+    }
+
+    default boolean existsAnyByUserId(String userId) {
+        return countAnyByUserId(userId) > 0;
+    }
+
+    default boolean existsAnyByUserIdAndIdNot(String userId, String id) {
+        return countAnyByUserIdAndIdNot(userId, id) > 0;
+    }
+
+    /** id and name of members, including soft-deleted ones, e.g. to show who sent an old message. */
+    @Query(value = "select id, full_name from members where id in (:ids)", nativeQuery = true)
+    List<Object[]> findNamesIncludingDeleted(@Param("ids") Collection<String> ids);
+
     Optional<Member> findByUserId(String userId);
 
     boolean existsByUserIdAndIdNot(String userId, String id);

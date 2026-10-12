@@ -1,5 +1,7 @@
 package com.dotani.event.config;
 
+import com.dotani.shared.time.AppTime;
+import java.time.Duration;
 import com.dotani.event.entity.Event;
 import com.dotani.event.entity.EventParticipation;
 import com.dotani.event.entity.EventStatus;
@@ -7,13 +9,15 @@ import com.dotani.event.entity.EventType;
 import com.dotani.event.entity.ParticipationStatus;
 import com.dotani.event.repository.EventParticipationRepository;
 import com.dotani.event.repository.EventRepository;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Profile("dev")
+@Order(3)
 public class DevDataSeeder implements CommandLineRunner {
 
     private final EventRepository eventRepository;
@@ -87,15 +91,16 @@ public class DevDataSeeder implements CommandLineRunner {
             int daysFromNow,
             int maxParticipants
     ) {
-        LocalDateTime start = LocalDateTime.now().plusDays(daysFromNow).withNano(0);
+        // sample events start at 08:00 Vietnam time, daysFromNow days ahead
+        Instant start = AppTime.today().plusDays(daysFromNow).atTime(8, 0).atZone(AppTime.ZONE).toInstant();
         Event event = new Event();
         event.setTitle(title);
         event.setDescription(title + " - dữ liệu mẫu phục vụ môi trường phát triển.");
         event.setType(type);
         event.setLocation(location);
         event.setStartTime(start);
-        event.setEndTime(start.plusHours(2));
-        event.setRegistrationDeadline(start.minusDays(1));
+        event.setEndTime(start.plus(Duration.ofHours(2)));
+        event.setRegistrationDeadline(start.minus(Duration.ofDays(1)));
         event.setOrganizationId(organizationId);
         event.setMaxParticipants(maxParticipants);
         event.setStatus(EventStatus.PUBLISHED);
