@@ -22,7 +22,7 @@ CREATE DATABASE dotani_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 JDBC URL có dạng:
 
 ```text
-jdbc:mysql://<host>:<port>/dotani_db?useSSL=true&serverTimezone=Asia/Ho_Chi_Minh
+jdbc:mysql://<host>:<port>/dotani_db?useSSL=true&serverTimezone=UTC
 ```
 
 Nếu provider yêu cầu chứng chỉ/tuỳ chọn SSL riêng, chỉnh URL theo hướng dẫn của provider.
@@ -39,10 +39,11 @@ Environment variables:
 
 ```env
 SPRING_PROFILES_ACTIVE=prod
-DB_URL=jdbc:mysql://<host>:<port>/dotani_db?useSSL=true&serverTimezone=Asia/Ho_Chi_Minh
+DB_URL=jdbc:mysql://<host>:<port>/dotani_db?useSSL=true&serverTimezone=UTC
 DB_USERNAME=<mysql-user>
 DB_PASSWORD=<mysql-password>
 AUTH_JWT_SECRET=<chuỗi ngẫu nhiên, tối thiểu 32 ký tự>
+FIELD_ENCRYPTION_KEY=<khoá AES-256 dạng base64, 32 byte; giữ bản sao an toàn>
 APP_CORS_ALLOWED_ORIGINS=https://<domain-vercel>
 GOOGLE_CLIENT_ID=<google-oauth-client-id>      # chỉ khi dùng đăng nhập Google
 JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0

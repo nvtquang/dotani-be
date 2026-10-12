@@ -14,6 +14,11 @@ CREATE USER IF NOT EXISTS 'dotani_test'@'localhost' IDENTIFIED BY 'dotani_test';
 CREATE USER IF NOT EXISTS 'dotani_test'@'127.0.0.1' IDENTIFIED BY 'dotani_test';
 GRANT ALL PRIVILEGES ON dotani_test.* TO 'dotani_test'@'localhost';
 GRANT ALL PRIVILEGES ON dotani_test.* TO 'dotani_test'@'127.0.0.1';
+
+-- Phase2MigrationTest dựng lại schema trong database riêng này
+CREATE DATABASE IF NOT EXISTS dotani_migration_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON dotani_migration_test.* TO 'dotani_test'@'localhost';
+GRANT ALL PRIVILEGES ON dotani_migration_test.* TO 'dotani_test'@'127.0.0.1';
 ```
 
 Chạy:
@@ -29,7 +34,7 @@ Luôn chạy kèm `clean` sau khi xoá/đổi tên class: Maven không tự xoá
 
 ## Kết quả gần nhất
 
-`mvn clean verify` trên database trống: **119 test, 0 lỗi**.
+`mvn clean verify` trên database trống: **143 test, 0 lỗi**.
 
 | Module | Lớp test | Số test | Nội dung chính |
 | --- | --- | ---: | --- |
@@ -51,6 +56,13 @@ Luôn chạy kèm `clean` sau khi xoá/đổi tên class: Maven không tự xoá
 | chat | `ChatReadStateIntegrationTest` | 2 | Đếm tin chưa đọc, đánh dấu đã đọc |
 | notification | `NotificationIntegrationTest` | 6 | Danh sách, chưa đọc, đánh dấu đã đọc |
 | audit | `AuditLogIntegrationTest` | 4 | Ghi và xem audit log theo role |
+| auth | `RoleSingleSourceIntegrationTest` | 2 | Role/phạm vi chỉ lưu ở member; đổi role có hiệu lực ở token kế tiếp |
+| member | `MemberEmailIntegrationTest` | 4 | Email lưu một nơi: tài khoản nếu có, ngược lại email liên hệ |
+| member | `BankingEncryptionIntegrationTest` | 3 | Số tài khoản mã hoá AES-GCM trong DB |
+| audit | `AuditDetailsIntegrationTest` | 2 | Audit ghi giá trị trước/sau, IP, user agent |
+| shared | `TimeStorageIntegrationTest` | 3 | Lưu UTC, trả ISO-8601 có Z, lọc theo ngày Việt Nam |
+| shared | `SoftDeleteIntegrationTest` | 2 | Xoá mềm: ẩn khỏi truy vấn nhưng giữ lịch sử |
+| migration | `Phase2MigrationTest` | 8 | Chạy V801–V809 trên dữ liệu dạng cũ, kiểm tra từng bước chuyển dữ liệu |
 | — | `SmokeIntegrationTest` | 2 | App khởi động, health, xác thực cơ bản |
 
 ## Viết test mới

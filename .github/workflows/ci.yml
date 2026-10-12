@@ -33,7 +33,7 @@ jobs:
           --health-retries=30
 
     env:
-      TEST_DB_URL: jdbc:mysql://127.0.0.1:3306/dotani_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
+      TEST_DB_URL: jdbc:mysql://127.0.0.1:3306/dotani_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       TEST_DB_USERNAME: dotani_test
       TEST_DB_PASSWORD: dotani_test
 
@@ -45,6 +45,13 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+
+      # Phase2MigrationTest rebuilds the schema in its own database.
+      - name: Create migration test database
+        run: >-
+          mysql -h 127.0.0.1 -uroot -proot -e
+          "CREATE DATABASE IF NOT EXISTS dotani_migration_test;
+          GRANT ALL PRIVILEGES ON dotani_migration_test.* TO 'dotani_test'@'%';"
 
       - name: mvn verify
         run: mvn -B -ntp verify
