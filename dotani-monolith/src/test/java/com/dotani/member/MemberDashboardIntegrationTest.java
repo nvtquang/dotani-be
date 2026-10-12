@@ -105,7 +105,7 @@ class MemberDashboardIntegrationTest extends IntegrationTest {
     ) {
         Member member = new Member();
         member.setFullName(fullName);
-        member.setUserId(userId);
+        member.setUserId(userId == null ? null : data.ensureAccount(userId));
         member.setEmail(userId + "@example.com");
         member.setMemberRole(role);
         member.setMemberStatus(status);

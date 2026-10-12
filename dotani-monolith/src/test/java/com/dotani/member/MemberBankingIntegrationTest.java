@@ -258,7 +258,7 @@ class MemberBankingIntegrationTest extends IntegrationTest {
     private Member saveMember(String fullName, String userId, OrganizationUnit organization) {
         Member member = new Member();
         member.setFullName(fullName);
-        member.setUserId(userId);
+        member.setUserId(userId == null ? null : data.ensureAccount(userId));
         member.setEmail(userId + "@example.com");
         member.setMemberStatus(MemberStatus.ACTIVE);
         member.setMemberRole(MemberRole.MEMBER);

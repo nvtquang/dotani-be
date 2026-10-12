@@ -154,7 +154,7 @@ class RoleManagementIntegrationTest extends IntegrationTest {
     private Member saveMember(String fullName, String userId, OrganizationUnit organization, MemberRole role) {
         Member member = new Member();
         member.setFullName(fullName);
-        member.setUserId(userId);
+        member.setUserId(userId == null ? null : data.ensureAccount(userId));
         member.setEmail(userId + "@example.com");
         member.setMemberStatus(MemberStatus.ACTIVE);
         member.setMemberRole(role);

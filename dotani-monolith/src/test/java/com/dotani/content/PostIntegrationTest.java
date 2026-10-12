@@ -13,10 +13,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.dotani.content.entity.Post;
-import com.dotani.content.entity.PostImage;
 import com.dotani.content.entity.PostStatus;
 import com.dotani.content.entity.PostType;
-import com.dotani.content.repository.PostImageRepository;
+import com.dotani.shared.attachment.Attachment;
+import com.dotani.shared.attachment.AttachmentRepository;
 import com.dotani.content.repository.PostRepository;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -53,7 +53,7 @@ class PostIntegrationTest extends IntegrationTest {
     private PostRepository postRepository;
 
     @Autowired
-    private PostImageRepository postImageRepository;
+    private AttachmentRepository attachmentRepository;
 
     private Post wardPost;
     private Post tdp1Post;
@@ -62,8 +62,8 @@ class PostIntegrationTest extends IntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        data.legacyIds();
         cleanStorage();
-        postImageRepository.deleteAll();
         postRepository.deleteAll();
 
         wardPost = savePost("Thong bao phuong", PostType.ANNOUNCEMENT, WARD_ID, PostStatus.PUBLISHED, "ward-secretary");
@@ -185,10 +185,10 @@ class PostIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.images[0].id").isNotEmpty())
                 .andExpect(jsonPath("$.images[0].imageUrl").value(org.hamcrest.Matchers.startsWith("/uploads/post-images/")));
 
-        var images = postImageRepository.findAll();
+        var images = attachmentRepository.findAll();
         assertThat(images).hasSize(2);
-        PostImage firstImage = images.getFirst();
-        String firstUrl = firstImage.getImageUrl();
+        Attachment firstImage = images.getFirst();
+        String firstUrl = firstImage.getUrl();
         String storedFilename = firstUrl.substring("/uploads/post-images/".length());
         assertThat(storedFilename).doesNotContain("report-1.png");
         assertThat(Files.exists(POST_IMAGE_STORAGE_PATH.resolve(storedFilename))).isTrue();
@@ -197,7 +197,7 @@ class PostIntegrationTest extends IntegrationTest {
         mockMvc.perform(withWardSecretary(delete("/api/posts/{id}/images/{imageId}", tdp1Post.getId(), imageId)))
                 .andExpect(status().isNoContent());
 
-        assertThat(postImageRepository.findById(imageId)).isEmpty();
+        assertThat(attachmentRepository.findById(imageId)).isEmpty();
         assertThat(Files.exists(POST_IMAGE_STORAGE_PATH.resolve(storedFilename))).isFalse();
     }
 

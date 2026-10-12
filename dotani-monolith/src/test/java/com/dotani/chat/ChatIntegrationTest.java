@@ -5,6 +5,8 @@ import com.dotani.DotaniMonolithApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import com.dotani.support.IntegrationTest;
+import com.dotani.shared.attachment.AttachmentOwnerType;
+import com.dotani.shared.attachment.AttachmentRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -79,11 +81,15 @@ class ChatIntegrationTest extends IntegrationTest {
     @Autowired
     private MessageRepository messageRepository;
 
+    @Autowired
+    private AttachmentRepository attachmentRepository;
+
     private Conversation directConversation;
     private Conversation groupConversation;
 
     @BeforeEach
     void setUp() {
+        data.legacyIds();
         messageRepository.deleteAll();
         conversationMemberRepository.deleteAll();
         conversationRepository.deleteAll();
@@ -178,7 +184,13 @@ class ChatIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.attachmentUrl").value(org.hamcrest.Matchers.startsWith("/uploads/chat/attachments/")));
 
         assertThat(messageRepository.findAll()).hasSize(1);
-        assertThat(messageRepository.findAll().getFirst().getAttachmentUrl()).startsWith("/uploads/chat/attachments/");
+        String messageId = messageRepository.findAll().getFirst().getId();
+        assertThat(attachmentRepository.findAll()).singleElement().satisfies(attachment -> {
+            assertThat(attachment.getOwnerType()).isEqualTo(AttachmentOwnerType.MESSAGE);
+            assertThat(attachment.getOwnerId()).isEqualTo(messageId);
+            assertThat(attachment.getUrl()).startsWith("/uploads/chat/attachments/");
+            assertThat(attachment.getMime()).isEqualTo("application/pdf");
+        });
     }
 
     @Test

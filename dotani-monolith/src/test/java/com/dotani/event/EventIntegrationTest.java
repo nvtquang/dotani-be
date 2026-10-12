@@ -18,7 +18,8 @@ import com.dotani.event.entity.EventType;
 import com.dotani.event.entity.ParticipationStatus;
 import com.dotani.event.repository.EventParticipationRepository;
 import com.dotani.event.repository.EventRepository;
-import java.time.LocalDateTime;
+import com.dotani.shared.time.AppTime;
+import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +57,7 @@ class EventIntegrationTest extends IntegrationTest {
 
     @BeforeEach
     void setUp() {
+        data.legacyIds();
         participationRepository.deleteAll();
         eventRepository.deleteAll();
         wardEvent = saveEvent("Hop BCH phuong", EventType.MEETING, WARD_ID, EventStatus.PUBLISHED, 1);
@@ -170,7 +172,7 @@ class EventIntegrationTest extends IntegrationTest {
                         .param("type", "CONGRESS")
                         .param("organization", TDP_2_ID)
                         .param("status", "DRAFT")
-                        .param("date", LocalDateTime.now().plusDays(3).toLocalDate().toString())
+                        .param("date", OffsetDateTime.now(AppTime.ZONE).plusDays(3).toLocalDate().toString())
                         .param("upcoming", "true")
                         .param("page", "0")
                         .param("size", "5")
@@ -195,7 +197,7 @@ class EventIntegrationTest extends IntegrationTest {
     @Test
     void validatesRegistrationDeadlineBeforeStartTime() throws Exception {
         Map<String, Object> payload = eventPayload("Invalid deadline", EventType.EVENT, TDP_1_ID, EventStatus.PUBLISHED, 14);
-        payload.put("registrationDeadline", LocalDateTime.now().plusDays(20).toString());
+        payload.put("registrationDeadline", OffsetDateTime.now(AppTime.ZONE).plusDays(20).toInstant().toString());
 
         mockMvc.perform(withWardSecretary(post("/api/events"))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -236,7 +238,7 @@ class EventIntegrationTest extends IntegrationTest {
 
     @Test
     void memberCannotVoteAfterRegistrationDeadline() throws Exception {
-        tdp1Event.setRegistrationDeadline(LocalDateTime.now().minusMinutes(1));
+        tdp1Event.setRegistrationDeadline(OffsetDateTime.now(AppTime.ZONE).minusMinutes(1).toInstant());
         eventRepository.save(tdp1Event);
 
         mockMvc.perform(withMember(put("/api/events/{eventId}/participation", tdp1Event.getId()), "member-1", TDP_1_ID)
@@ -327,9 +329,9 @@ class EventIntegrationTest extends IntegrationTest {
         event.setDescription(title + " description");
         event.setType(type);
         event.setLocation("Thuong Cat");
-        event.setStartTime(LocalDateTime.now().plusDays(daysFromNow).withNano(0));
-        event.setEndTime(LocalDateTime.now().plusDays(daysFromNow).plusHours(2).withNano(0));
-        event.setRegistrationDeadline(LocalDateTime.now().plusDays(daysFromNow).minusDays(1).withNano(0));
+        event.setStartTime(OffsetDateTime.now(AppTime.ZONE).plusDays(daysFromNow).withNano(0).toInstant());
+        event.setEndTime(OffsetDateTime.now(AppTime.ZONE).plusDays(daysFromNow).plusHours(2).withNano(0).toInstant());
+        event.setRegistrationDeadline(OffsetDateTime.now(AppTime.ZONE).plusDays(daysFromNow).minusDays(1).withNano(0).toInstant());
         event.setOrganizationId(organizationId);
         event.setMaxParticipants(50);
         event.setStatus(status);
@@ -356,15 +358,15 @@ class EventIntegrationTest extends IntegrationTest {
             EventStatus status,
             int daysFromNow
     ) {
-        LocalDateTime start = LocalDateTime.now().plusDays(daysFromNow).withNano(0);
+        OffsetDateTime start = OffsetDateTime.now(AppTime.ZONE).plusDays(daysFromNow).withNano(0);
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("title", title);
         payload.put("description", title + " description");
         payload.put("type", type.name());
         payload.put("location", "Nha van hoa");
-        payload.put("startTime", start.toString());
-        payload.put("endTime", start.plusHours(2).toString());
-        payload.put("registrationDeadline", start.minusDays(1).toString());
+        payload.put("startTime", start.toInstant().toString());
+        payload.put("endTime", start.plusHours(2).toInstant().toString());
+        payload.put("registrationDeadline", start.minusDays(1).toInstant().toString());
         payload.put("organizationId", organizationId);
         payload.put("maxParticipants", 100);
         payload.put("status", status.name());

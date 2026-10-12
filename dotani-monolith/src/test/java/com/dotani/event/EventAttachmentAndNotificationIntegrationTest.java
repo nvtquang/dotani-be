@@ -13,7 +13,8 @@ import com.dotani.member.entity.MemberStatus;
 import com.dotani.member.entity.OrganizationUnit;
 import com.dotani.support.IntegrationTest;
 import com.dotani.support.TestData.Fixture;
-import java.time.LocalDateTime;
+import com.dotani.shared.time.AppTime;
+import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -109,8 +110,8 @@ class EventAttachmentAndNotificationIntegrationTest extends IntegrationTest {
         payload.put("description", "Mo ta");
         payload.put("type", "MEETING");
         payload.put("location", "Hoi truong");
-        payload.put("startTime", LocalDateTime.now().plusDays(7).withNano(0).toString());
-        payload.put("endTime", LocalDateTime.now().plusDays(7).plusHours(2).withNano(0).toString());
+        payload.put("startTime", OffsetDateTime.now(AppTime.ZONE).plusDays(7).withNano(0).toInstant().toString());
+        payload.put("endTime", OffsetDateTime.now(AppTime.ZONE).plusDays(7).plusHours(2).withNano(0).toInstant().toString());
         payload.put("organizationId", organization.getId());
         payload.put("status", "PUBLISHED");
 

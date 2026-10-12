@@ -58,6 +58,7 @@ class NotificationIntegrationTest extends IntegrationTest {
 
     @BeforeEach
     void setUp() {
+        data.legacyIds();
         userNotificationRepository.deleteAll();
         notificationRepository.deleteAll();
     }

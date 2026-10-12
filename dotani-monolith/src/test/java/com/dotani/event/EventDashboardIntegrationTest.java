@@ -13,7 +13,8 @@ import com.dotani.event.entity.EventType;
 import com.dotani.event.entity.ParticipationStatus;
 import com.dotani.event.repository.EventParticipationRepository;
 import com.dotani.event.repository.EventRepository;
-import java.time.LocalDateTime;
+import com.dotani.shared.time.AppTime;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,13 +40,14 @@ class EventDashboardIntegrationTest extends IntegrationTest {
 
     @BeforeEach
     void setUp() {
+        data.legacyIds();
         participationRepository.deleteAll();
         eventRepository.deleteAll();
 
-        tdp1UpcomingEvent = saveEvent("Hop TDP 1", "tdp-1", LocalDateTime.now().plusDays(2), EventStatus.PUBLISHED);
-        tdp2UpcomingEvent = saveEvent("Hop TDP 2", "tdp-2", LocalDateTime.now().plusDays(3), EventStatus.PUBLISHED);
-        saveEvent("Su kien cu", "tdp-1", LocalDateTime.now().minusDays(1), EventStatus.PUBLISHED);
-        saveEvent("Ban nhap", "tdp-1", LocalDateTime.now().plusDays(4), EventStatus.DRAFT);
+        tdp1UpcomingEvent = saveEvent("Hop TDP 1", "tdp-1", OffsetDateTime.now(AppTime.ZONE).plusDays(2), EventStatus.PUBLISHED);
+        tdp2UpcomingEvent = saveEvent("Hop TDP 2", "tdp-2", OffsetDateTime.now(AppTime.ZONE).plusDays(3), EventStatus.PUBLISHED);
+        saveEvent("Su kien cu", "tdp-1", OffsetDateTime.now(AppTime.ZONE).minusDays(1), EventStatus.PUBLISHED);
+        saveEvent("Ban nhap", "tdp-1", OffsetDateTime.now(AppTime.ZONE).plusDays(4), EventStatus.DRAFT);
 
         saveParticipation(tdp1UpcomingEvent, "member-1", ParticipationStatus.GOING);
         saveParticipation(tdp1UpcomingEvent, "member-2", ParticipationStatus.NOT_GOING);
@@ -80,15 +82,15 @@ class EventDashboardIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.registeredEvents[0].id").value(tdp1UpcomingEvent.getId()));
     }
 
-    private Event saveEvent(String title, String organizationId, LocalDateTime startTime, EventStatus status) {
+    private Event saveEvent(String title, String organizationId, OffsetDateTime startTime, EventStatus status) {
         Event event = new Event();
         event.setTitle(title);
         event.setDescription("Noi dung");
         event.setType(EventType.MEETING);
         event.setLocation("Hoi truong");
-        event.setStartTime(startTime);
-        event.setEndTime(startTime.plusHours(2));
-        event.setRegistrationDeadline(startTime.minusHours(1));
+        event.setStartTime(startTime.toInstant());
+        event.setEndTime(startTime.plusHours(2).toInstant());
+        event.setRegistrationDeadline(startTime.minusHours(1).toInstant());
         event.setOrganizationId(organizationId);
         event.setStatus(status);
         event.setCreatedBy("officer-1");

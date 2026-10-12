@@ -92,8 +92,9 @@ class MemberManagementIntegrationTest extends IntegrationTest {
         mockMvc.perform(withWardSecretary(delete("/api/members/{id}", createdMemberId)))
                 .andExpect(status().isNoContent());
 
-        assertThat(memberRepository.findById(createdMemberId).orElseThrow().getMemberStatus())
-                .isEqualTo(MemberStatus.INACTIVE);
+        // soft deleted: hidden from queries but the row is kept
+        assertThat(memberRepository.findById(createdMemberId)).isEmpty();
+        assertThat(memberRepository.existsAnyById(createdMemberId)).isTrue();
     }
 
     @Test
@@ -186,8 +187,9 @@ class MemberManagementIntegrationTest extends IntegrationTest {
         mockMvc.perform(withTdpSecretary(delete("/api/members/{id}", createdMemberId), tdp1.getId()))
                 .andExpect(status().isNoContent());
 
-        assertThat(memberRepository.findById(createdMemberId).orElseThrow().getMemberStatus())
-                .isEqualTo(MemberStatus.INACTIVE);
+        // soft deleted: hidden from queries but the row is kept
+        assertThat(memberRepository.findById(createdMemberId)).isEmpty();
+        assertThat(memberRepository.existsAnyById(createdMemberId)).isTrue();
     }
 
     @Test
@@ -219,8 +221,9 @@ class MemberManagementIntegrationTest extends IntegrationTest {
         mockMvc.perform(withTdpDeputySecretary(delete("/api/members/{id}", createdMemberId), tdp1.getId()))
                 .andExpect(status().isNoContent());
 
-        assertThat(memberRepository.findById(createdMemberId).orElseThrow().getMemberStatus())
-                .isEqualTo(MemberStatus.INACTIVE);
+        // soft deleted: hidden from queries but the row is kept
+        assertThat(memberRepository.findById(createdMemberId)).isEmpty();
+        assertThat(memberRepository.existsAnyById(createdMemberId)).isTrue();
     }
 
     @Test
@@ -322,7 +325,7 @@ class MemberManagementIntegrationTest extends IntegrationTest {
     ) {
         Member member = new Member();
         member.setFullName(fullName);
-        member.setUserId(userId);
+        member.setUserId(userId == null ? null : data.ensureAccount(userId));
         member.setEmail(email);
         member.setMemberStatus(MemberStatus.ACTIVE);
         member.setMemberRole(role);
@@ -332,7 +335,7 @@ class MemberManagementIntegrationTest extends IntegrationTest {
 
     private Map<String, Object> memberPayload(String fullName, String userId, String organizationId) {
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("userId", userId);
+        payload.put("userId", data.ensureAccount(userId));
         payload.put("fullName", fullName);
         payload.put("dateOfBirth", "2004-04-15");
         payload.put("gender", "MALE");

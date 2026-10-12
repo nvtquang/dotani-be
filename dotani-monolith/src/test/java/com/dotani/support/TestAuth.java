@@ -1,5 +1,6 @@
 package com.dotani.support;
 
+import com.dotani.shared.security.AccessScope;
 import com.dotani.shared.security.Role;
 import com.dotani.auth.entity.UserAccount;
 import com.dotani.auth.service.JwtService;
@@ -41,11 +42,8 @@ public class TestAuth {
         user.setId(userId);
         user.setUsername(userId);
         user.setEmail(userId + "@dotani.test");
-        user.setRole(role);
         user.setMemberId(memberId);
-        user.setOrganizationId(organizationId);
-        user.setTdpId(tdpId);
-        return jwtService.createAccessToken(user);
+        return jwtService.createAccessToken(user, new AccessScope(role, organizationId, tdpId));
     }
 
     public String expiredToken(Member member) {
@@ -53,10 +51,10 @@ public class TestAuth {
         user.setId(member.getUserId());
         user.setUsername(member.getUserId());
         user.setEmail(member.getUserId() + "@dotani.test");
-        user.setRole(Role.valueOf(member.getMemberRole().name()));
         user.setMemberId(member.getId());
         Instant past = Instant.now().minusSeconds(3600);
-        return jwtService.createAccessToken(user, past.minusSeconds(60), past);
+        AccessScope scope = new AccessScope(Role.valueOf(member.getMemberRole().name()), null, null);
+        return jwtService.createAccessToken(user, scope, past.minusSeconds(60), past);
     }
 
     public MockHttpServletRequestBuilder as(Member member, MockHttpServletRequestBuilder request) {

@@ -2,7 +2,7 @@
 # Local: MySQL in D:\Tools with user dotani_test. CI: the mysql service in .github/workflows/ci.yml.
 spring:
   datasource:
-    url: ${TEST_DB_URL:jdbc:mysql://127.0.0.1:3306/dotani_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh}
+    url: ${TEST_DB_URL:jdbc:mysql://127.0.0.1:3306/dotani_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${TEST_DB_USERNAME:dotani_test}
     password: ${TEST_DB_PASSWORD:dotani_test}
   jpa:
@@ -31,3 +31,7 @@ storage:
   chat:
     attachment-path: target/test-storage/chat-attachments
     group-avatar-path: target/test-storage/chat-group-avatars
+
+app:
+  security:
+    field-encryption-key: 8VgSHMFfze2Tu5Ymv22tg6mW8WVIPNmFfk/zQ9el6o0=

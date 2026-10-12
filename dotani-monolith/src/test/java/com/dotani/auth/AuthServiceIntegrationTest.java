@@ -21,7 +21,13 @@ import com.dotani.auth.service.JwtService;
 import com.dotani.auth.service.GoogleTokenVerifier;
 import com.dotani.member.entity.OrganizationUnit;
 import com.dotani.member.entity.OrganizationUnitType;
+import com.dotani.member.entity.Member;
+import com.dotani.member.entity.MemberRole;
+import com.dotani.member.entity.MemberStatus;
 import com.dotani.member.repository.MemberRepository;
+import com.dotani.member.repository.OrganizationUnitRepository;
+import com.dotani.member.service.MemberAccessService;
+import com.dotani.shared.security.AccessScope;
 import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +69,12 @@ class AuthServiceIntegrationTest extends IntegrationTest {
     @Autowired
     private MemberRepository memberRepository;
 
+    @Autowired
+    private OrganizationUnitRepository organizationUnitRepository;
+
+    @Autowired
+    private MemberAccessService memberAccessService;
+
     @MockBean
     private GoogleTokenVerifier googleTokenVerifier;
 
@@ -94,11 +106,11 @@ class AuthServiceIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.user.role").value("MEMBER"));
 
         UserAccount user = userAccountRepository.findByUsername("member01").orElseThrow();
-        assertThat(user.getRole()).isEqualTo(Role.MEMBER);
+        assertThat(scopeOf(user).role()).isEqualTo(Role.MEMBER);
         assertThat(user.getMemberId()).isEqualTo(memberRepository.findByUserId(user.getId()).orElseThrow().getId());
         // accounts are scoped to the ward, with the TDP as tdpId (same shape as seeded accounts)
-        assertThat(user.getOrganizationId()).isEqualTo("ward-thuong-cat");
-        assertThat(user.getTdpId()).isEqualTo("tdp-1");
+        assertThat(scopeOf(user).organizationId()).isEqualTo("ward-thuong-cat");
+        assertThat(scopeOf(user).tdpId()).isEqualTo("tdp-1");
     }
 
     @Test
@@ -117,7 +129,7 @@ class AuthServiceIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.user.role").value("MEMBER"));
 
         UserAccount user = userAccountRepository.findByUsername("member01").orElseThrow();
-        assertThat(user.getRole()).isEqualTo(Role.MEMBER);
+        assertThat(scopeOf(user).role()).isEqualTo(Role.MEMBER);
     }
 
     @Test
@@ -214,7 +226,7 @@ class AuthServiceIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.user.tdpId").value("tdp-1"));
 
         UserAccount user = userAccountRepository.findByEmail("google.member@example.com").orElseThrow();
-        assertThat(user.getRole()).isEqualTo(Role.MEMBER);
+        assertThat(scopeOf(user).role()).isEqualTo(Role.MEMBER);
         assertThat(user.getProviderSubject()).isEqualTo("google-sub-1");
         assertThat(user.getMemberId()).isEqualTo(memberRepository.findByUserId(user.getId()).orElseThrow().getId());
     }
@@ -237,7 +249,7 @@ class AuthServiceIntegrationTest extends IntegrationTest {
     void expiredJwtReturnsUnauthorized() throws Exception {
         UserAccount user = createUser("member01", "member01@example.com", "Password123!");
         Instant now = Instant.now();
-        String expiredToken = jwtService.createAccessToken(user, now.minusSeconds(120), now.minusSeconds(60));
+        String expiredToken = jwtService.createAccessToken(user, scopeOf(user), now.minusSeconds(120), now.minusSeconds(60));
 
         mockMvc.perform(get("/api/auth/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + expiredToken))
@@ -298,9 +310,21 @@ class AuthServiceIntegrationTest extends IntegrationTest {
         user.setUsername(username);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(password));
-        user.setRole(Role.MEMBER);
         user.setEnabled(true);
-        return userAccountRepository.save(user);
+        UserAccount saved = userAccountRepository.save(user);
+        // every account is linked to a member profile, which holds its role and scope
+        Member member = new Member();
+        member.setFullName(username);
+        member.setUserId(saved.getId());
+        member.setMemberRole(MemberRole.MEMBER);
+        member.setMemberStatus(MemberStatus.ACTIVE);
+        member.setOrganization(organizationUnitRepository.findById("tdp-1").orElseThrow());
+        saved.setMemberId(memberRepository.save(member).getId());
+        return userAccountRepository.save(saved);
+    }
+
+    private AccessScope scopeOf(UserAccount user) {
+        return memberAccessService.scopeOf(userAccountRepository.findById(user.getId()).orElseThrow().getMemberId());
     }
 
 }

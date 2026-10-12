@@ -94,10 +94,11 @@ class OrganizationIntegrationTest extends IntegrationTest {
 
     @Test
     void registrationCreatesMemberProfileInSelectedTdpAndReportsItsWard() {
+        // in the real flow the login account is created first
+        data.ensureAccount("registered-user-1");
         var registered = memberRegistrationService.register(
                 "registered-user-1",
                 "Nguyen Van Dang Ky",
-                "registered@example.com",
                 "0900000000",
                 null,
                 tdp1.getId()

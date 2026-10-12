@@ -8,7 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.dotani.member.entity.MemberRole;
 import com.dotani.member.entity.OrganizationUnit;
 import com.dotani.support.IntegrationTest;
-import java.time.LocalDateTime;
+import com.dotani.shared.time.AppTime;
+import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -42,8 +43,8 @@ class SelfRegisteredMemberScopeIntegrationTest extends IntegrationTest {
         Map<String, Object> event = new LinkedHashMap<>();
         event.put("title", "Dai hoi doan phuong");
         event.put("type", "CONGRESS");
-        event.put("startTime", LocalDateTime.now().plusDays(3).withNano(0).toString());
-        event.put("endTime", LocalDateTime.now().plusDays(3).plusHours(3).withNano(0).toString());
+        event.put("startTime", OffsetDateTime.now(AppTime.ZONE).plusDays(3).withNano(0).toInstant().toString());
+        event.put("endTime", OffsetDateTime.now(AppTime.ZONE).plusDays(3).plusHours(3).withNano(0).toInstant().toString());
         event.put("organizationId", ward.getId());
         event.put("status", "PUBLISHED");
         var created = mockMvc.perform(auth.as(wardSecretary, post("/api/events"))

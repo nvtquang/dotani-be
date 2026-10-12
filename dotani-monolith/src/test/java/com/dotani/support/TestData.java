@@ -9,6 +9,7 @@ import com.dotani.member.entity.OrganizationUnit;
 import com.dotani.member.entity.OrganizationUnitType;
 import com.dotani.member.repository.MemberRepository;
 import com.dotani.member.repository.OrganizationUnitRepository;
+import com.dotani.member.service.MemberAccessService;
 import com.dotani.shared.security.Role;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -20,15 +21,18 @@ public class TestData {
     private final OrganizationUnitRepository organizationUnitRepository;
     private final MemberRepository memberRepository;
     private final UserAccountRepository userAccountRepository;
+    private final MemberAccessService memberAccessService;
 
     public TestData(
             OrganizationUnitRepository organizationUnitRepository,
             MemberRepository memberRepository,
-            UserAccountRepository userAccountRepository
+            UserAccountRepository userAccountRepository,
+            MemberAccessService memberAccessService
     ) {
         this.organizationUnitRepository = organizationUnitRepository;
         this.memberRepository = memberRepository;
         this.userAccountRepository = userAccountRepository;
+        this.memberAccessService = memberAccessService;
     }
 
     public OrganizationUnit ward() {
@@ -60,37 +64,83 @@ public class TestData {
         return organizationUnitRepository.save(organizationUnit);
     }
 
+    /** A member with its own login account, linked both ways like a registered user. */
     public Member member(String fullName, OrganizationUnit organization, MemberRole role) {
-        String key = UUID.randomUUID().toString().substring(0, 8);
+        String userId = ensureAccount("user-" + UUID.randomUUID().toString().substring(0, 8));
         Member member = new Member();
         member.setFullName(fullName);
-        member.setUserId("user-" + key);
-        member.setEmail(key + "@dotani.test");
+        member.setUserId(userId);
         member.setMemberStatus(MemberStatus.ACTIVE);
         member.setMemberRole(role);
         member.setOrganization(organization);
-        return memberRepository.save(member);
+        Member saved = memberRepository.save(member);
+        account(saved);
+        return saved;
     }
 
     public Member save(Member member) {
         return memberRepository.save(member);
     }
 
-    /** The login account behind a member, needed by flows that sync the account (e.g. role changes). */
+    /**
+     * Creates a login account with this id if none exists (members.user_id must reference one).
+     * Returns the id so it can be used inline: {@code member.setUserId(data.ensureAccount("user-1"))}.
+     */
+    public String ensureAccount(String userId) {
+        if (!userAccountRepository.existsById(userId)) {
+            UserAccount user = new UserAccount();
+            user.setId(userId);
+            user.setUsername(userId);
+            user.setEmail(userId + "@dotani.test");
+            user.setPasswordHash("{noop}unused");
+            user.setEnabled(true);
+            userAccountRepository.save(user);
+        }
+        return userId;
+    }
+
+    /** Links the member's login account back to the member. */
     public UserAccount account(Member member) {
-        UserAccount user = new UserAccount();
-        user.setId(member.getUserId());
-        user.setUsername(member.getUserId());
-        user.setEmail(member.getUserId() + "@dotani.test");
-        user.setPasswordHash("{noop}unused");
-        user.setRole(Role.valueOf(member.getMemberRole().name()));
+        ensureAccount(member.getUserId());
+        UserAccount user = userAccountRepository.findById(member.getUserId()).orElseThrow();
         user.setMemberId(member.getId());
-        user.setEnabled(true);
         return userAccountRepository.save(user);
     }
 
+    /** The role a token issued for this account would carry (derived from its member profile). */
     public Role accountRole(String userId) {
-        return userAccountRepository.findById(userId).orElseThrow().getRole();
+        return memberAccessService.scopeOf(userAccountRepository.findById(userId).orElseThrow().getMemberId()).role();
+    }
+
+    /**
+     * Organizations and members under the literal ids older tests reference ("ward-thuong-cat", "tdp-1",
+     * "member-1", ...). Foreign keys require those rows to exist.
+     */
+    public void legacyIds() {
+        OrganizationUnit ward = organization("Phuong Thuong Cat", "THUONG_CAT", OrganizationUnitType.WARD, null, "ward-thuong-cat");
+        OrganizationUnit tdp1 = organization("Chi doan TDP 1", "TDP_1", OrganizationUnitType.YOUTH_UNION_BRANCH, ward, "tdp-1");
+        OrganizationUnit tdp2 = organization("Chi doan TDP 2", "TDP_2", OrganizationUnitType.YOUTH_UNION_BRANCH, ward, "tdp-2");
+        for (int i = 1; i <= 4; i++) {
+            memberWithId("member-" + i, "Member " + i, tdp1, MemberRole.MEMBER);
+        }
+        memberWithId("ward-secretary-member", "Ward Secretary", ward, MemberRole.WARD_SECRETARY);
+        memberWithId("ward-secretary", "Ward Secretary 2", ward, MemberRole.WARD_SECRETARY);
+        memberWithId("tdp-secretary-member", "TDP 1 Secretary", tdp1, MemberRole.TDP_SECRETARY);
+        memberWithId("tdp1-secretary", "TDP 1 Secretary 2", tdp1, MemberRole.TDP_SECRETARY);
+        memberWithId("tdp2-secretary", "TDP 2 Secretary", tdp2, MemberRole.TDP_SECRETARY);
+    }
+
+    public Member memberWithId(String id, String fullName, OrganizationUnit organization, MemberRole role) {
+        Member member = new Member();
+        member.setId(id);
+        member.setFullName(fullName);
+        member.setUserId(ensureAccount(id + "-account"));
+        member.setMemberStatus(MemberStatus.ACTIVE);
+        member.setMemberRole(role);
+        member.setOrganization(organization);
+        Member saved = memberRepository.save(member);
+        account(saved);
+        return saved;
     }
 
     /** A ward with two TDPs and one member per role, the fixture most tests start from. */
