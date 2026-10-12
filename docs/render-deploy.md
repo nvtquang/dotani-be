@@ -45,6 +45,13 @@ DB_PASSWORD=<mysql-password>
 AUTH_JWT_SECRET=<chuỗi ngẫu nhiên, tối thiểu 32 ký tự>
 FIELD_ENCRYPTION_KEY=<khoá AES-256 dạng base64, 32 byte; giữ bản sao an toàn>
 APP_CORS_ALLOWED_ORIGINS=https://<domain-vercel>
+FRONTEND_URL=https://<domain-vercel>             # dùng trong link đặt lại mật khẩu
+SPRING_MAIL_HOST=<smtp-host>                     # gửi email đặt lại mật khẩu
+SPRING_MAIL_PORT=587
+SPRING_MAIL_USERNAME=<smtp-user>
+SPRING_MAIL_PASSWORD=<smtp-password>
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+MAIL_FROM=no-reply@<domain>
 GOOGLE_CLIENT_ID=<google-oauth-client-id>      # chỉ khi dùng đăng nhập Google
 JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0
 AVATAR_STORAGE_PATH=/app/storage/avatars

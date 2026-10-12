@@ -34,7 +34,7 @@ Luôn chạy kèm `clean` sau khi xoá/đổi tên class: Maven không tự xoá
 
 ## Kết quả gần nhất
 
-`mvn clean verify` trên database trống: **143 test, 0 lỗi**.
+`mvn clean verify` trên database trống: **162 test, 0 lỗi**.
 
 | Module | Lớp test | Số test | Nội dung chính |
 | --- | --- | ---: | --- |
@@ -63,6 +63,10 @@ Luôn chạy kèm `clean` sau khi xoá/đổi tên class: Maven không tự xoá
 | shared | `TimeStorageIntegrationTest` | 3 | Lưu UTC, trả ISO-8601 có Z, lọc theo ngày Việt Nam |
 | shared | `SoftDeleteIntegrationTest` | 2 | Xoá mềm: ẩn khỏi truy vấn nhưng giữ lịch sử |
 | migration | `Phase2MigrationTest` | 8 | Chạy V801–V809 trên dữ liệu dạng cũ, kiểm tra từng bước chuyển dữ liệu |
+| auth | `AccountSecurityIntegrationTest` | 7 | Đăng xuất (một/mọi thiết bị), đổi mật khẩu, quên/đặt lại mật khẩu, khoá sau 5 lần sai, giới hạn tần suất |
+| notification | `DomainNotificationIntegrationTest` | 6 | Thông báo bài viết mới, sự kiện thay đổi/huỷ, nhắc hạn đăng ký, sự kiện do TDP tạo |
+| shared | `ResponseContractIntegrationTest` | 2 | Response kèm tên (tác giả, đơn vị, người tham gia); phân trang page/size |
+| shared | `ErrorMessagesIntegrationTest` | 4 | Mã lỗi ổn định kèm thông báo tiếng Việt, kể cả lỗi validate |
 | — | `SmokeIntegrationTest` | 2 | App khởi động, health, xác thực cơ bản |
 
 ## Viết test mới
