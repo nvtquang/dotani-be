@@ -2,6 +2,7 @@ package com.dotani.member.service;
 
 import com.dotani.auth.entity.UserAccount;
 import com.dotani.auth.repository.UserAccountRepository;
+import com.dotani.auth.service.RefreshTokenService;
 
 import com.dotani.audit.entity.AuditAction;
 import com.dotani.audit.entity.ResourceType;
@@ -53,6 +54,7 @@ public class MemberService {
     private final MemberMapper memberMapper;
     private final MemberScopeService memberScopeService;
     private final UserAccountRepository userAccountRepository;
+    private final RefreshTokenService refreshTokenService;
     private final AuditLogService auditLogService;
     private final StorageService storageService;
 
@@ -63,6 +65,7 @@ public class MemberService {
             MemberMapper memberMapper,
             MemberScopeService memberScopeService,
             UserAccountRepository userAccountRepository,
+            RefreshTokenService refreshTokenService,
             AuditLogService auditLogService,
             StorageService storageService
     ) {
@@ -72,6 +75,7 @@ public class MemberService {
         this.memberMapper = memberMapper;
         this.memberScopeService = memberScopeService;
         this.userAccountRepository = userAccountRepository;
+        this.refreshTokenService = refreshTokenService;
         this.auditLogService = auditLogService;
         this.storageService = storageService;
     }
@@ -226,6 +230,9 @@ public class MemberService {
         memberScopeService.requireWrite(currentUser, member);
         // soft delete: hidden from every query and unable to sign in, but kept for history (messages, posts)
         member.markDeleted();
+        if (member.getUserId() != null) {
+            refreshTokenService.revokeAllForUser(member.getUserId());
+        }
         auditLogService.record(currentUser, AuditAction.DISABLE_MEMBER, ResourceType.MEMBER, member.getId(),
                 member.getOrganization().getId(), AuditDiff.deleted(auditSnapshot(member)));
     }
@@ -246,7 +253,11 @@ public class MemberService {
             auditLogService.record(currentUser, AuditAction.CHANGE_ROLE, ResourceType.MEMBER, member.getId(),
                     member.getOrganization().getId(),
                     AuditDiff.changes(AuditDiff.snapshot("memberRole", oldRole), AuditDiff.snapshot("memberRole", newRole)));
-            // The member row is the only place a role is stored; the next token issued for the account picks it up.
+            // The member row is the only place a role is stored. Revoking refresh tokens forces a new login, so
+            // the new role applies at the latest when the current access token expires.
+            if (member.getUserId() != null) {
+                refreshTokenService.revokeAllForUser(member.getUserId());
+            }
         }
 
         return memberMapper.toResponse(member);

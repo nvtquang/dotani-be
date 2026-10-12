@@ -23,9 +23,15 @@ public class MonolithExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(MonolithExceptionHandler.class);
 
+    private final ErrorMessages errorMessages;
+
+    public MonolithExceptionHandler(ErrorMessages errorMessages) {
+        this.errorMessages = errorMessages;
+    }
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiErrorResponse> handle(ApiException exception, WebRequest request) {
-        return error(exception.getStatus(), exception.getCode(), exception.getMessage(), request, List.of());
+        return error(exception.getStatus(), exception.getCode(), exception.getArgs(), exception.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -84,6 +90,19 @@ public class MonolithExceptionHandler {
             WebRequest request,
             List<String> details
     ) {
+        return error(status, code, new Object[0], message, request, details);
+    }
+
+    // message: Vietnamese text for the code (messages.properties), falling back to the English one
+    private ResponseEntity<ApiErrorResponse> error(
+            HttpStatus status,
+            String code,
+            Object[] args,
+            String fallbackMessage,
+            WebRequest request,
+            List<String> details
+    ) {
+        String message = errorMessages.forCode(code, args, fallbackMessage);
         return ResponseEntity.status(status)
                 .body(new ApiErrorResponse(
                         OffsetDateTime.now(),

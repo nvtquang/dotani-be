@@ -71,10 +71,7 @@ public class EventParticipationService {
     public List<EventParticipationResponse> findParticipants(String eventId, CurrentUser currentUser) {
         Event event = getEvent(eventId);
         eventScopeService.requireWrite(currentUser, event);
-        return participationRepository.findByEvent_IdOrderByUpdatedAtDesc(eventId)
-                .stream()
-                .map(participationMapper::toResponse)
-                .toList();
+        return participationMapper.toResponses(participationRepository.findByEvent_IdOrderByUpdatedAtDesc(eventId));
     }
 
     @Transactional(readOnly = true)
@@ -94,8 +91,7 @@ public class EventParticipationService {
         return participationRepository.findByMemberIdAndEvent_DeletedAtIsNullOrderByUpdatedAtDesc(memberId)
                 .stream()
                 .filter(participation -> canReadParticipation(currentUser, participation))
-                .map(participationMapper::toResponse)
-                .toList();
+                .collect(java.util.stream.Collectors.collectingAndThen(java.util.stream.Collectors.toList(), participationMapper::toResponses));
     }
 
     private EventParticipation createParticipation(Event event, String memberId) {

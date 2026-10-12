@@ -15,6 +15,7 @@ public record EventResponse(
         Instant endTime,
         Instant registrationDeadline,
         String organizationId,
+        String organizationName,
         Integer maxParticipants,
         EventStatus status,
         String createdBy,

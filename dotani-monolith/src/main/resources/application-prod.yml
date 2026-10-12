@@ -15,6 +15,9 @@ auth:
     secret: ${AUTH_JWT_SECRET}
 
 app:
+  frontend-url: ${FRONTEND_URL}
+  mail:
+    log-links-when-unconfigured: false
   security:
     field-encryption-key: ${FIELD_ENCRYPTION_KEY}
   cors:

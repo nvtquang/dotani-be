@@ -1,5 +1,7 @@
 package com.dotani.event.controller;
 
+import org.springframework.data.web.PageableDefault;
+import com.dotani.shared.web.Pages;
 import com.dotani.event.dto.EventRequest;
 import com.dotani.event.dto.EventParticipationRequest;
 import com.dotani.event.dto.EventParticipationResponse;
@@ -81,8 +83,11 @@ public class EventController {
 
     @GetMapping("/me")
     @Operation(summary = "List my event participations", description = "MEMBER and officers can see their own participation records.")
-    public List<EventParticipationResponse> findMyEvents(@AuthenticationPrincipal CurrentUser currentUser) {
-        return participationService.findCurrentMemberEvents(currentUser);
+    public Page<EventParticipationResponse> findMyEvents(
+            @PageableDefault(size = 20) Pageable pageable,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        return Pages.of(participationService.findCurrentMemberEvents(currentUser), pageable);
     }
 
     @PostMapping
@@ -107,11 +112,12 @@ public class EventController {
 
     @GetMapping("/{eventId}/participants")
     @Operation(summary = "List event participants", description = "Only officers who can manage the event can view participant list.")
-    public List<EventParticipationResponse> findParticipants(
+    public Page<EventParticipationResponse> findParticipants(
             @PathVariable("eventId") String eventId,
+            @PageableDefault(size = 100) Pageable pageable,
             @AuthenticationPrincipal CurrentUser currentUser
     ) {
-        return participationService.findParticipants(eventId, currentUser);
+        return Pages.of(participationService.findParticipants(eventId, currentUser), pageable);
     }
 
     @GetMapping("/{eventId}/participation-summary")

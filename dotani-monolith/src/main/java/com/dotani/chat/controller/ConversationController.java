@@ -1,5 +1,7 @@
 package com.dotani.chat.controller;
 
+import org.springframework.data.web.PageableDefault;
+import com.dotani.shared.web.Pages;
 import com.dotani.chat.dto.ConversationCreateRequest;
 import com.dotani.chat.dto.ConversationMemberRequest;
 import com.dotani.chat.dto.ConversationResponse;
@@ -70,8 +72,11 @@ public class ConversationController {
 
     @GetMapping
     @Operation(summary = "List my conversations", description = "Returns conversations where the current member is a participant.")
-    public List<ConversationResponse> findMine(@AuthenticationPrincipal CurrentUser currentUser) {
-        return conversationService.findMine(currentUser);
+    public Page<ConversationResponse> findMine(
+            @PageableDefault(size = 50) Pageable pageable,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        return Pages.of(conversationService.findMine(currentUser), pageable);
     }
 
     @GetMapping("/{id}")

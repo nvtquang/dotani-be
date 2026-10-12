@@ -1,6 +1,8 @@
 package com.dotani.content.service;
 
 import com.dotani.shared.attachment.Attachment;
+import com.dotani.shared.events.DomainEvents.PostPublished;
+import org.springframework.context.ApplicationEventPublisher;
 import com.dotani.shared.attachment.AttachmentKind;
 import com.dotani.shared.attachment.AttachmentOwnerType;
 import com.dotani.shared.attachment.AttachmentRepository;
@@ -12,6 +14,7 @@ import com.dotani.audit.service.AuditLogService;
 import com.dotani.content.dto.PostRequest;
 import com.dotani.content.dto.PostResponse;
 import com.dotani.content.entity.Post;
+import com.dotani.content.entity.PostStatus;
 import com.dotani.content.entity.PostType;
 import com.dotani.shared.exception.ApiException;
 import com.dotani.content.mapper.PostMapper;
@@ -39,6 +42,7 @@ public class PostService {
     private final PostScopeService postScopeService;
     private final StorageService storageService;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher events;
 
     public PostService(
             PostRepository postRepository,
@@ -46,7 +50,8 @@ public class PostService {
             PostMapper postMapper,
             PostScopeService postScopeService,
             StorageService storageService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            ApplicationEventPublisher events
     ) {
         this.postRepository = postRepository;
         this.attachmentRepository = attachmentRepository;
@@ -54,6 +59,7 @@ public class PostService {
         this.postScopeService = postScopeService;
         this.storageService = storageService;
         this.auditLogService = auditLogService;
+        this.events = events;
     }
 
     @Transactional(readOnly = true)
@@ -70,7 +76,7 @@ public class PostService {
                 .and(PostSpecifications.hasType(type))
                 .and(PostSpecifications.onDate(date));
 
-        return postRepository.findAll(specification, pageable).map(postMapper::toResponse);
+        return postMapper.toResponsePage(postRepository.findAll(specification, pageable));
     }
 
     @Transactional(readOnly = true)
@@ -91,6 +97,9 @@ public class PostService {
         Post saved = postRepository.save(post);
         auditLogService.record(currentUser, AuditAction.CREATE_POST, ResourceType.POST, saved.getId(),
                 saved.getOrganizationId(), AuditDiff.created(auditSnapshot(saved)));
+        if (saved.getStatus() == PostStatus.PUBLISHED) {
+            events.publishEvent(new PostPublished(saved.getId(), saved.getTitle(), saved.getOrganizationId(), saved.getAuthorId()));
+        }
         return postMapper.toResponse(saved);
     }
 
@@ -100,7 +109,11 @@ public class PostService {
         postScopeService.requireManage(currentUser, post);
         postScopeService.requireManageRequest(currentUser, request.organizationId(), request.type());
         Map<String, Object> before = auditSnapshot(post);
+        PostStatus oldStatus = post.getStatus();
         postMapper.apply(post, request);
+        if (oldStatus != PostStatus.PUBLISHED && post.getStatus() == PostStatus.PUBLISHED) {
+            events.publishEvent(new PostPublished(post.getId(), post.getTitle(), post.getOrganizationId(), post.getAuthorId()));
+        }
         auditLogService.record(currentUser, AuditAction.UPDATE_POST, ResourceType.POST, post.getId(),
                 post.getOrganizationId(), AuditDiff.changes(before, auditSnapshot(post)));
         return postMapper.toResponse(post);

@@ -13,6 +13,7 @@ public record EventParticipationResponse(
         Instant eventStartTime,
         Instant eventEndTime,
         String memberId,
+        String participantName,
         ParticipationStatus status,
         Instant createdAt,
         Instant updatedAt

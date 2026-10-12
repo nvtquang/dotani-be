@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.Base64;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -33,7 +34,7 @@ public class RefreshTokenService {
 
     @Transactional
     public String createRefreshToken(UserAccount user) {
-        String rawToken = generateOpaqueToken();
+        String rawToken = newOpaqueToken();
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUser(user);
@@ -66,6 +67,21 @@ public class RefreshTokenService {
         return refreshToken.getUser();
     }
 
+    /** Revokes one refresh token (logout). Unknown or already revoked tokens are ignored. */
+    @Transactional
+    public Optional<UserAccount> revoke(String rawToken) {
+        return refreshTokenRepository.findByTokenHash(hash(rawToken)).map(refreshToken -> {
+            refreshToken.setRevoked(true);
+            return refreshToken.getUser();
+        });
+    }
+
+    /** Signs the user out everywhere: every session must log in again once its access token expires. */
+    @Transactional
+    public void revokeAllForUser(String userId) {
+        refreshTokenRepository.revokeAllForUser(userId);
+    }
+
     public String hash(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -76,7 +92,7 @@ public class RefreshTokenService {
         }
     }
 
-    private String generateOpaqueToken() {
+    public String newOpaqueToken() {
         byte[] bytes = new byte[48];
         secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);

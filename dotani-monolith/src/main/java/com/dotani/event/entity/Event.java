@@ -79,6 +79,9 @@ public class Event {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "deadline_reminded_at")
+    private Instant deadlineRemindedAt;
+
     @PrePersist
     void prePersist() {
         if (id == null) {
@@ -208,6 +211,10 @@ public class Event {
 
     public Instant getDeletedAt() {
         return deletedAt;
+    }
+
+    public void markDeadlineReminded(Instant now) {
+        deadlineRemindedAt = now;
     }
 
     public void markDeleted() {

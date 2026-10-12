@@ -1,6 +1,11 @@
 package com.dotani.event.service;
 
 import com.dotani.shared.attachment.Attachment;
+import com.dotani.shared.events.DomainEvents.EventCancelled;
+import com.dotani.shared.events.DomainEvents.EventChanged;
+import com.dotani.shared.events.DomainEvents.EventPublished;
+import java.util.Set;
+import org.springframework.context.ApplicationEventPublisher;
 import com.dotani.shared.attachment.AttachmentKind;
 import com.dotani.shared.attachment.AttachmentOwnerType;
 import com.dotani.shared.attachment.AttachmentRepository;
@@ -33,11 +38,14 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class EventService {
 
+    // changes that matter to people who answered the event
+    private static final Set<String> NOTIFIED_FIELDS = Set.of("title", "startTime", "endTime", "location", "registrationDeadline");
+
     private final EventRepository eventRepository;
     private final EventMapper eventMapper;
     private final EventScopeService eventScopeService;
     private final AuditLogService auditLogService;
-    private final EventNotificationPublisher eventNotificationPublisher;
+    private final ApplicationEventPublisher events;
     private final AttachmentRepository attachmentRepository;
     private final EventStorageService eventStorageService;
 
@@ -47,7 +55,7 @@ public class EventService {
             EventMapper eventMapper,
             EventScopeService eventScopeService,
             AuditLogService auditLogService,
-            EventNotificationPublisher eventNotificationPublisher,
+            ApplicationEventPublisher events,
             EventStorageService eventStorageService
     ) {
         this.eventRepository = eventRepository;
@@ -55,7 +63,7 @@ public class EventService {
         this.eventMapper = eventMapper;
         this.eventScopeService = eventScopeService;
         this.auditLogService = auditLogService;
-        this.eventNotificationPublisher = eventNotificationPublisher;
+        this.events = events;
         this.eventStorageService = eventStorageService;
     }
 
@@ -77,7 +85,7 @@ public class EventService {
                 .and(EventSpecifications.onDate(date))
                 .and(EventSpecifications.upcoming(upcoming));
 
-        return eventRepository.findAll(specification, pageable).map(eventMapper::toResponse);
+        return eventMapper.toResponsePage(eventRepository.findAll(specification, pageable));
     }
 
     @Transactional(readOnly = true)
@@ -99,7 +107,7 @@ public class EventService {
         auditLogService.record(currentUser, AuditAction.CREATE_EVENT, ResourceType.EVENT, saved.getId(),
                 saved.getOrganizationId(), AuditDiff.created(auditSnapshot(saved)));
         if (saved.getStatus() == EventStatus.PUBLISHED) {
-            eventNotificationPublisher.publishEventCreated(saved);
+            events.publishEvent(new EventPublished(saved.getId(), saved.getTitle(), saved.getDescription(), saved.getOrganizationId()));
         }
         return eventMapper.toResponse(saved);
     }
@@ -112,9 +120,12 @@ public class EventService {
         eventScopeService.requireCreateInOrganization(currentUser, request.organizationId());
 
         Map<String, Object> before = auditSnapshot(event);
+        EventStatus oldStatus = event.getStatus();
         eventMapper.apply(event, request);
+        Map<String, Object> changes = AuditDiff.changes(before, auditSnapshot(event));
         auditLogService.record(currentUser, AuditAction.UPDATE_EVENT, ResourceType.EVENT, event.getId(),
-                event.getOrganizationId(), AuditDiff.changes(before, auditSnapshot(event)));
+                event.getOrganizationId(), changes);
+        publishUpdateEvents(event, oldStatus, changes);
         return eventMapper.toResponse(event);
     }
 
@@ -126,6 +137,9 @@ public class EventService {
                 event.getOrganizationId(), AuditDiff.deleted(auditSnapshot(event)));
         // soft delete: the event, its attachments and participations stay in the database
         event.markDeleted();
+        if (event.getStatus() == EventStatus.PUBLISHED) {
+            events.publishEvent(new EventCancelled(event.getId(), event.getTitle(), event.getOrganizationId(), true));
+        }
     }
 
     @Transactional
@@ -176,6 +190,18 @@ public class EventService {
         String url = attachment.getUrl();
         event.removeAttachment(attachment);
         eventStorageService.delete(url);
+    }
+
+    // Members hear about an event when it becomes visible, when what they answered changes, or when it is cancelled.
+    private void publishUpdateEvents(Event event, EventStatus oldStatus, Map<String, Object> changes) {
+        EventStatus newStatus = event.getStatus();
+        if (oldStatus != EventStatus.PUBLISHED && newStatus == EventStatus.PUBLISHED) {
+            events.publishEvent(new EventPublished(event.getId(), event.getTitle(), event.getDescription(), event.getOrganizationId()));
+        } else if (oldStatus == EventStatus.PUBLISHED && newStatus == EventStatus.CANCELLED) {
+            events.publishEvent(new EventCancelled(event.getId(), event.getTitle(), event.getOrganizationId(), false));
+        } else if (newStatus == EventStatus.PUBLISHED && changes.keySet().stream().anyMatch(NOTIFIED_FIELDS::contains)) {
+            events.publishEvent(new EventChanged(event.getId(), event.getTitle(), event.getOrganizationId()));
+        }
     }
 
     private Event getEvent(String id) {

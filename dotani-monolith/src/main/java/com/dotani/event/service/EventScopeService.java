@@ -6,7 +6,10 @@ import com.dotani.shared.security.CurrentUser;
 import com.dotani.shared.security.OrgScopePolicy;
 import org.springframework.stereotype.Service;
 
-/** Event rules: anyone in scope can read; only ward officers create and manage events. */
+/**
+ * Event rules: anyone in scope can read. Ward officers manage every event; TDP secretaries and deputies
+ * manage events of their own TDP only.
+ */
 @Service
 public class EventScopeService {
 
@@ -36,6 +39,9 @@ public class EventScopeService {
     }
 
     public boolean canWrite(CurrentUser currentUser, String organizationId) {
-        return OrgScopePolicy.coversWholeWard(currentUser);
+        if (OrgScopePolicy.coversWholeWard(currentUser)) {
+            return true;
+        }
+        return currentUser.hasTdpScope() && OrgScopePolicy.isOwnTdp(currentUser, organizationId);
     }
 }

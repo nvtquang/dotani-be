@@ -75,6 +75,12 @@ storage:
     max-group-avatar-size-bytes: ${STORAGE_CHAT_MAX_GROUP_AVATAR_SIZE_BYTES:2097152}
 
 app:
+  # base URL of the frontend, used in password reset links
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  mail:
+    from: ${MAIL_FROM:no-reply@dotani.local}
+    # without SMTP (SPRING_MAIL_HOST unset) reset links are written to the log; never in prod
+    log-links-when-unconfigured: true
   security:
     # AES-256 key (base64, 32 bytes) encrypting bank account numbers. The default is for development only;
     # the prod profile requires FIELD_ENCRYPTION_KEY. Losing the key makes stored account numbers unreadable.
