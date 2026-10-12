@@ -297,9 +297,9 @@ class MemberManagementIntegrationTest extends IntegrationTest {
     void organizationMembersEndpointReturnsMembersWithinScope() throws Exception {
         mockMvc.perform(withTdpSecretary(get("/api/organizations/{id}/members", tdp1.getId()), tdp1.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[?(@.memberId == '%s')]".formatted(memberTdp1.getId())).exists())
-                .andExpect(jsonPath("$[?(@.memberId == '%s')]".formatted(memberTdp2.getId())).doesNotExist());
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[?(@.memberId == '%s')]".formatted(memberTdp1.getId())).exists())
+                .andExpect(jsonPath("$.content[?(@.memberId == '%s')]".formatted(memberTdp2.getId())).doesNotExist());
     }
 
     private OrganizationUnit saveOrganization(

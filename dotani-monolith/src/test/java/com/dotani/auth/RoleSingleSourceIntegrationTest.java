@@ -26,7 +26,7 @@ class RoleSingleSourceIntegrationTest extends IntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Test
-    void roleChangeOnMemberIsCarriedByTheNextIssuedToken() throws Exception {
+    void roleChangeSignsTheMemberOutAndTheNextLoginCarriesTheNewRole() throws Exception {
         Fixture f = data.standardFixture();
         Member member = f.tdp1Member();
         var account = userAccountRepository.findById(member.getUserId()).orElseThrow();
@@ -48,9 +48,15 @@ class RoleSingleSourceIntegrationTest extends IntegrationTest {
                         .content(json(Map.of("role", MemberRole.TDP_SECRETARY.name()))))
                 .andExpect(status().isOk());
 
+        // changing a role signs the member out: the old refresh token no longer works
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("refreshToken", refreshToken))))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("usernameOrEmail", account.getUsername(), "password", "Password@123"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.role").value("TDP_SECRETARY"))
                 .andExpect(jsonPath("$.user.tdpId").value(f.tdp1().getId()));

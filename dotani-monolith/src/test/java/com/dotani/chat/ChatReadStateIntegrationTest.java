@@ -51,19 +51,19 @@ class ChatReadStateIntegrationTest extends IntegrationTest {
 
         mockMvc.perform(auth.as(f.tdp1Member(), get("/api/chat/conversations")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].unreadCount").value(2));
+                .andExpect(jsonPath("$.content[0].unreadCount").value(2));
         mockMvc.perform(auth.as(f.tdp1Secretary(), get("/api/chat/conversations")))
-                .andExpect(jsonPath("$[0].unreadCount").value(1));
+                .andExpect(jsonPath("$.content[0].unreadCount").value(1));
 
         mockMvc.perform(auth.as(f.tdp1Member(), patch("/api/chat/conversations/{id}/read", conversation.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.unreadCount").value(0));
 
         mockMvc.perform(auth.as(f.tdp1Member(), get("/api/chat/conversations")))
-                .andExpect(jsonPath("$[0].unreadCount").value(0));
+                .andExpect(jsonPath("$.content[0].unreadCount").value(0));
         // marking read is per member: the other side still has its unread message
         mockMvc.perform(auth.as(f.tdp1Secretary(), get("/api/chat/conversations")))
-                .andExpect(jsonPath("$[0].unreadCount").value(1));
+                .andExpect(jsonPath("$.content[0].unreadCount").value(1));
     }
 
     @Test

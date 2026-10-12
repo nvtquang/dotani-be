@@ -95,22 +95,32 @@ class EventIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void tdpSecretaryCannotManageOwnTdpEvent() throws Exception {
-        mockMvc.perform(withTdpSecretary(post("/api/events"), TDP_1_ID)
+    void tdpSecretaryCanManageOwnTdpEventsButNotWardEvents() throws Exception {
+        String createdId = objectMapper.readTree(mockMvc.perform(withTdpSecretary(post("/api/events"), TDP_1_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(eventPayload("Sinh hoat TDP 1", EventType.MEETING, TDP_1_ID, EventStatus.PUBLISHED, 7))))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("OUT_OF_SCOPE"));
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("id").asText();
 
         mockMvc.perform(withTdpSecretary(put("/api/events/{id}", tdp1Event.getId()), TDP_1_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(eventPayload("Sinh hoat TDP 1 updated", EventType.MEETING, TDP_1_ID, EventStatus.PUBLISHED, 8))))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("OUT_OF_SCOPE"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Sinh hoat TDP 1 updated"));
 
-        mockMvc.perform(withTdpSecretary(delete("/api/events/{id}", tdp1Event.getId()), TDP_1_ID))
+        mockMvc.perform(withTdpSecretary(delete("/api/events/{id}", createdId), TDP_1_ID))
+                .andExpect(status().is2xxSuccessful());
+
+        // a ward-level event is out of a TDP secretary's reach
+        mockMvc.perform(withTdpSecretary(post("/api/events"), TDP_1_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(eventPayload("Dai hoi phuong", EventType.CONGRESS, WARD_ID, EventStatus.PUBLISHED, 7))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("OUT_OF_SCOPE"));
+        mockMvc.perform(withTdpSecretary(put("/api/events/{id}", wardEvent.getId()), TDP_1_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(eventPayload("Sua su kien phuong", EventType.MEETING, WARD_ID, EventStatus.PUBLISHED, 7))))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -269,17 +279,21 @@ class EventIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void wardOfficerCanViewParticipantList() throws Exception {
+    void officersCanViewParticipantListOfEventsTheyManage() throws Exception {
         saveParticipation(tdp1Event, "member-1", ParticipationStatus.GOING);
         saveParticipation(tdp1Event, "member-2", ParticipationStatus.UNDECIDED);
 
         mockMvc.perform(withWardSecretary(get("/api/events/{eventId}/participants", tdp1Event.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[?(@.memberId == 'member-1')]").exists())
-                .andExpect(jsonPath("$[?(@.memberId == 'member-2')]").exists());
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[?(@.memberId == 'member-1')]").exists())
+                .andExpect(jsonPath("$.content[?(@.memberId == 'member-2')]").exists());
 
+        // a TDP secretary manages, and so sees participants of, events of their own TDP only
         mockMvc.perform(withTdpSecretary(get("/api/events/{eventId}/participants", tdp1Event.getId()), TDP_1_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2));
+        mockMvc.perform(withTdpSecretary(get("/api/events/{eventId}/participants", tdp2Event.getId()), TDP_1_ID))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("OUT_OF_SCOPE"));
 
@@ -311,10 +325,10 @@ class EventIntegrationTest extends IntegrationTest {
 
         mockMvc.perform(withMember(get("/api/events/me"), "member-1", TDP_1_ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[?(@.eventId == '%s')]".formatted(wardEvent.getId())).exists())
-                .andExpect(jsonPath("$[?(@.eventId == '%s')]".formatted(tdp1Event.getId())).exists())
-                .andExpect(jsonPath("$[?(@.eventId == '%s')]".formatted(tdp2Event.getId())).doesNotExist());
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[?(@.eventId == '%s')]".formatted(wardEvent.getId())).exists())
+                .andExpect(jsonPath("$.content[?(@.eventId == '%s')]".formatted(tdp1Event.getId())).exists())
+                .andExpect(jsonPath("$.content[?(@.eventId == '%s')]".formatted(tdp2Event.getId())).doesNotExist());
     }
 
     private Event saveEvent(

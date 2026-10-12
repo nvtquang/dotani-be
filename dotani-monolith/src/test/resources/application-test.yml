@@ -33,5 +33,8 @@ storage:
     group-avatar-path: target/test-storage/chat-group-avatars
 
 app:
+  async:
+    # run @Async listeners inline so tests can assert notifications right away
+    enabled: false
   security:
     field-encryption-key: 8VgSHMFfze2Tu5Ymv22tg6mW8WVIPNmFfk/zQ9el6o0=

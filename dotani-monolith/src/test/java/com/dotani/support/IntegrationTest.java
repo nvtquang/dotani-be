@@ -9,6 +9,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import com.dotani.shared.security.AuthRateLimitFilter;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -22,6 +24,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @SpringBootTest(classes = DotaniMonolithApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(TestMailConfig.class)
 public abstract class IntegrationTest {
 
     @Autowired
@@ -39,8 +42,16 @@ public abstract class IntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private AuthRateLimitFilter authRateLimitFilter;
+
+    @Autowired
+    protected TestMailConfig.RecordingPasswordResetMailer mailOutbox;
+
     @BeforeEach
     final void resetDatabaseBeforeEachTest() {
+        authRateLimitFilter.reset();
+        mailOutbox.clear();
         List<String> tables = jdbcTemplate.queryForList(
                 "select table_name from information_schema.tables "
                         + "where table_schema = database() and table_type = 'BASE TABLE' "

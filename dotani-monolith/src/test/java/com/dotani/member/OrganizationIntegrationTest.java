@@ -79,17 +79,17 @@ class OrganizationIntegrationTest extends IntegrationTest {
     void wardSecretaryCanReadAllOrganizations() throws Exception {
         mockMvc.perform(withWardSecretary(get("/api/organizations")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3));
+                .andExpect(jsonPath("$.content.length()").value(3));
     }
 
     @Test
     void publicOrganizationListReturnsActiveTdpBranchesForRegistration() throws Exception {
         mockMvc.perform(get("/api/organizations/public"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[?(@.id == '%s')]".formatted(tdp1.getId())).exists())
-                .andExpect(jsonPath("$[?(@.id == '%s')]".formatted(tdp2.getId())).exists())
-                .andExpect(jsonPath("$[?(@.id == '%s')]".formatted(ward.getId())).doesNotExist());
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[?(@.id == '%s')]".formatted(tdp1.getId())).exists())
+                .andExpect(jsonPath("$.content[?(@.id == '%s')]".formatted(tdp2.getId())).exists())
+                .andExpect(jsonPath("$.content[?(@.id == '%s')]".formatted(ward.getId())).doesNotExist());
     }
 
     @Test
@@ -116,7 +116,7 @@ class OrganizationIntegrationTest extends IntegrationTest {
     void tdpSecretaryCanOnlySeeWardAndOwnTdpInList() throws Exception {
         MvcResult result = mockMvc.perform(withTdpSecretary(get("/api/organizations"), tdp1.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$.content.length()").value(2))
                 .andReturn();
 
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
@@ -223,7 +223,7 @@ class OrganizationIntegrationTest extends IntegrationTest {
 
         mockMvc.perform(withTdpSecretary(get("/api/organizations/{id}/members", tdp1.getId()), tdp1.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.content.length()").value(0));
     }
 
     @Test
