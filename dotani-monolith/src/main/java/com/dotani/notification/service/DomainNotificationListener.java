@@ -1,6 +1,7 @@
 package com.dotani.notification.service;
 
 import com.dotani.event.repository.EventParticipationRepository;
+import com.dotani.member.entity.MemberRole;
 import com.dotani.member.entity.MemberStatus;
 import com.dotani.member.repository.MemberRepository;
 import com.dotani.notification.dto.NotificationCreateRequest;
@@ -10,10 +11,18 @@ import com.dotani.shared.events.DomainEvents.EventCancelled;
 import com.dotani.shared.events.DomainEvents.EventChanged;
 import com.dotani.shared.events.DomainEvents.EventDeadlineApproaching;
 import com.dotani.shared.events.DomainEvents.EventPublished;
+import com.dotani.shared.events.DomainEvents.FeeReminderRequested;
+import com.dotani.shared.events.DomainEvents.MemberTransferDecided;
+import com.dotani.shared.events.DomainEvents.MemberTransferRequested;
+import com.dotani.shared.events.DomainEvents.PollOpened;
+import com.dotani.shared.events.DomainEvents.PostCommented;
 import com.dotani.shared.events.DomainEvents.PostPublished;
 import com.dotani.shared.time.AppTime;
+import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.scheduling.annotation.Async;
@@ -34,6 +43,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class DomainNotificationListener {
 
     private static final DateTimeFormatter DEADLINE_FORMAT = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy").withZone(AppTime.ZONE);
+
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final List<MemberRole> WARD_OFFICER_ROLES = List.of(MemberRole.WARD_SECRETARY, MemberRole.WARD_DEPUTY_SECRETARY);
+    private static final List<MemberRole> TDP_OFFICER_ROLES = List.of(MemberRole.TDP_SECRETARY, MemberRole.TDP_DEPUTY_SECRETARY);
 
     private final NotificationManagementService notificationManagementService;
     private final MemberRepository memberRepository;
@@ -127,6 +140,93 @@ public class DomainNotificationListener {
                 ReferenceType.POST,
                 post.postId()
         );
+    }
+
+    @Async
+    @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(FeeReminderRequested reminder) {
+        String due = reminder.dueDate() == null ? "" : " Hạn nộp: " + DATE_FORMAT.format(reminder.dueDate()) + ".";
+        notify(
+                reminder.memberIds(),
+                NotificationType.FEE_REMINDER,
+                "Nhắc đóng đoàn phí: " + reminder.periodName(),
+                "Bạn chưa đóng đoàn phí " + formatMoney(reminder.amount()) + "." + due
+                        + " Mở mục Đoàn phí để xem thông tin chuyển khoản.",
+                ReferenceType.FEE_PERIOD,
+                reminder.periodId()
+        );
+    }
+
+    @Async
+    @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(MemberTransferRequested request) {
+        // ward officers decide every transfer; officers of the receiving TDP decide transfers into it
+        List<String> recipients = new ArrayList<>(memberRepository.findIdsByRoles(WARD_OFFICER_ROLES, null));
+        memberRepository.findIdsByRoles(TDP_OFFICER_ROLES, request.toOrganizationId()).stream()
+                .filter(id -> !recipients.contains(id))
+                .forEach(recipients::add);
+        recipients.remove(request.requestedByMemberId());
+        notify(
+                recipients,
+                NotificationType.TRANSFER_REQUESTED,
+                "Đề nghị chuyển sinh hoạt: " + request.memberName(),
+                request.memberName() + " đề nghị chuyển sinh hoạt về " + request.toOrganizationName() + ".",
+                ReferenceType.TRANSFER,
+                request.transferId()
+        );
+    }
+
+    @Async
+    @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(MemberTransferDecided decision) {
+        notify(
+                List.of(decision.memberId()),
+                NotificationType.TRANSFER_DECIDED,
+                decision.approved() ? "Đã duyệt chuyển sinh hoạt" : "Đề nghị chuyển sinh hoạt bị từ chối",
+                decision.approved()
+                        ? "Bạn đã được chuyển sinh hoạt về " + decision.toOrganizationName() + "."
+                        : "Đề nghị chuyển sinh hoạt về " + decision.toOrganizationName() + " không được duyệt.",
+                ReferenceType.TRANSFER,
+                decision.transferId()
+        );
+    }
+
+    @Async
+    @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(PostCommented comment) {
+        if (comment.postAuthorMemberId() == null || comment.postAuthorMemberId().equals(comment.commenterMemberId())) {
+            return;
+        }
+        notify(
+                List.of(comment.postAuthorMemberId()),
+                NotificationType.POST_COMMENT,
+                "Bình luận mới: " + comment.postTitle(),
+                comment.commenterName() + " đã bình luận bài viết của bạn.",
+                ReferenceType.POST,
+                comment.postId()
+        );
+    }
+
+    @Async
+    @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(PollOpened poll) {
+        notify(
+                activeMembersOf(poll.organizationId()),
+                NotificationType.POLL_OPENED,
+                "Biểu quyết mới: " + poll.title(),
+                "Một cuộc khảo sát/biểu quyết vừa mở trong đơn vị của bạn. Hãy cho ý kiến.",
+                ReferenceType.POLL,
+                poll.pollId()
+        );
+    }
+
+    private static String formatMoney(long amount) {
+        return NumberFormat.getIntegerInstance(Locale.forLanguageTag("vi")).format(amount) + " đ";
     }
 
     private List<String> activeMembersOf(String organizationId) {

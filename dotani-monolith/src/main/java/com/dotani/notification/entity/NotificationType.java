@@ -9,5 +9,10 @@ public enum NotificationType {
     MEETING_SCHEDULE,
     CONGRESS,
     POST_NEW,
-    SYSTEM
+    SYSTEM,
+    FEE_REMINDER,
+    TRANSFER_REQUESTED,
+    TRANSFER_DECIDED,
+    POST_COMMENT,
+    POLL_OPENED
 }

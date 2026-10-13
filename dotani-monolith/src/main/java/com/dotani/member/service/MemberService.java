@@ -57,6 +57,7 @@ public class MemberService {
     private final RefreshTokenService refreshTokenService;
     private final AuditLogService auditLogService;
     private final StorageService storageService;
+    private final MemberTransferService memberTransferService;
 
     public MemberService(
             MemberRepository memberRepository,
@@ -67,7 +68,8 @@ public class MemberService {
             UserAccountRepository userAccountRepository,
             RefreshTokenService refreshTokenService,
             AuditLogService auditLogService,
-            StorageService storageService
+            StorageService storageService,
+            MemberTransferService memberTransferService
     ) {
         this.memberRepository = memberRepository;
         this.organizationUnitRepository = organizationUnitRepository;
@@ -78,6 +80,7 @@ public class MemberService {
         this.refreshTokenService = refreshTokenService;
         this.auditLogService = auditLogService;
         this.storageService = storageService;
+        this.memberTransferService = memberTransferService;
     }
 
     @Transactional(readOnly = true)
@@ -198,6 +201,7 @@ public class MemberService {
                     member.getOrganization().getId(),
                     AuditDiff.changes(AuditDiff.snapshot("organizationId", oldOrganizationId),
                             AuditDiff.snapshot("organizationId", organization.getId())));
+            memberTransferService.recordDirectChange(member, oldOrganizationId, currentUser);
         }
         return memberMapper.toResponse(member);
     }

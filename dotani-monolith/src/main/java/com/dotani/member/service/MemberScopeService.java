@@ -48,7 +48,7 @@ public class MemberScopeService {
                 && currentUser.memberId().equals(member.getId());
     }
 
-    private boolean canWrite(CurrentUser currentUser, Member member) {
+    public boolean canWrite(CurrentUser currentUser, Member member) {
         if (currentUser.hasWardScope()) {
             return true;
         }

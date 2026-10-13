@@ -37,7 +37,7 @@ public class PostScopeService {
         organizationDirectory.requireExists(organizationId);
     }
 
-    private boolean canRead(CurrentUser currentUser, Post post) {
+    public boolean canRead(CurrentUser currentUser, Post post) {
         if (!OrgScopePolicy.canSeeContentOf(currentUser, post.getOrganizationId())) {
             return false;
         }

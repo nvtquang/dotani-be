@@ -62,6 +62,25 @@ public interface MemberRepository extends JpaRepository<Member, String>, JpaSpec
             @Param("status") MemberStatus status
     );
 
+    /** Officers with one of the roles: ward-wide (organizationId null) or in one organization. */
+    @Query("select member.id from Member member "
+            + "where member.memberRole in :roles "
+            + "and (:organizationId is null or member.organization.id = :organizationId)")
+    List<String> findIdsByRoles(
+            @Param("roles") Collection<MemberRole> roles,
+            @Param("organizationId") String organizationId
+    );
+
+    /** id, organization id and parent organization id of every member with the status (statistics). */
+    @Query("select member.id, member.organization.id, parent.id from Member member "
+            + "left join member.organization.parent parent "
+            + "where member.memberStatus = :status")
+    List<Object[]> findPlacementsByStatus(@Param("status") MemberStatus status);
+
+    /** id, name and avatar of members, including soft-deleted ones (authors of old comments). */
+    @Query(value = "select id, full_name, avatar_url from members where id in (:ids)", nativeQuery = true)
+    List<Object[]> findCardsIncludingDeleted(@Param("ids") Collection<String> ids);
+
     @Query("select member.memberStatus, count(member) from Member member "
             + "where (:organizationId is null or member.organization.id = :organizationId) "
             + "group by member.memberStatus")

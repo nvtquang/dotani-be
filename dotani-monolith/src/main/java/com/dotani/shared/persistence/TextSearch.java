@@ -3,6 +3,7 @@ package com.dotani.shared.persistence;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
+import java.text.Normalizer;
 import java.util.Locale;
 
 /**
@@ -26,5 +27,18 @@ public final class TextSearch {
         Expression<String> normalized = criteriaBuilder.function(
                 "replace", String.class, criteriaBuilder.lower(field), criteriaBuilder.literal("đ"), criteriaBuilder.literal("d"));
         return criteriaBuilder.like(normalized, pattern, ESCAPE);
+    }
+
+    /** In-memory form of {@link #contains} for lists already loaded: accents and case are ignored. */
+    public static boolean matches(String value, String text) {
+        if (text == null || text.isBlank()) {
+            return true;
+        }
+        return value != null && fold(value).contains(fold(text.trim()));
+    }
+
+    private static String fold(String value) {
+        String lower = value.toLowerCase(Locale.ROOT).replace('đ', 'd');
+        return Normalizer.normalize(lower, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
     }
 }

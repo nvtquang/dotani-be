@@ -4,5 +4,8 @@ public enum ReferenceType {
     EVENT,
     TASK,
     POST,
-    SYSTEM
+    SYSTEM,
+    FEE_PERIOD,
+    TRANSFER,
+    POLL
 }
