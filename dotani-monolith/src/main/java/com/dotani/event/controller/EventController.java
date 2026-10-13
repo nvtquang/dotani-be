@@ -6,6 +6,7 @@ import com.dotani.event.dto.EventRequest;
 import com.dotani.event.dto.EventParticipationRequest;
 import com.dotani.event.dto.EventParticipationResponse;
 import com.dotani.event.dto.EventParticipationSummaryResponse;
+import com.dotani.event.dto.EventFilter;
 import com.dotani.event.dto.EventResponse;
 import com.dotani.event.entity.EventStatus;
 import com.dotani.event.entity.EventType;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -59,17 +61,23 @@ public class EventController {
     }
 
     @GetMapping
-    @Operation(summary = "List events", description = "Supports type, organization, status, date, upcoming, page, and size filters. Visibility is scoped by the current user's role and organization.")
+    @Operation(summary = "List events", description = "Filters: type, organization, status, date, when (UPCOMING|PAST), from/to (ISO instants, startTime range), participating (GOING registrations of the caller); upcoming=true is kept as an alias of when=UPCOMING. Visibility is scoped by the current user's role and organization.")
     public Page<EventResponse> findAll(
             @RequestParam(required = false, name = "type") EventType type,
             @RequestParam(required = false, name = "organization") String organizationId,
             @RequestParam(required = false, name = "status") EventStatus status,
             @RequestParam(required = false, name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false, name = "upcoming") Boolean upcoming,
+            @RequestParam(required = false, name = "when") EventFilter.When when,
+            @RequestParam(required = false, name = "from") Instant from,
+            @RequestParam(required = false, name = "to") Instant to,
+            @RequestParam(required = false, name = "participating", defaultValue = "false") boolean participating,
             Pageable pageable,
             @AuthenticationPrincipal CurrentUser currentUser
     ) {
-        return eventService.findAll(type, organizationId, status, date, upcoming, pageable, currentUser);
+        EventFilter.When effectiveWhen = when == null && Boolean.TRUE.equals(upcoming) ? EventFilter.When.UPCOMING : when;
+        EventFilter filter = new EventFilter(type, organizationId, status, date, effectiveWhen, from, to, participating);
+        return eventService.findAll(filter, pageable, currentUser);
     }
 
     @GetMapping("/{id}")

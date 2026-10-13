@@ -57,7 +57,10 @@ class ChatReadStateIntegrationTest extends IntegrationTest {
 
         mockMvc.perform(auth.as(f.tdp1Member(), patch("/api/chat/conversations/{id}/read", conversation.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.unreadCount").value(0));
+                .andExpect(jsonPath("$.unreadCount").value(0))
+                // read state per member drives the "seen" marks: set for the reader, still null for the other side
+                .andExpect(jsonPath("$.readStates['" + f.tdp1Member().getId() + "']").isNotEmpty())
+                .andExpect(jsonPath("$.readStates['" + f.tdp1Secretary().getId() + "']").doesNotExist());
 
         mockMvc.perform(auth.as(f.tdp1Member(), get("/api/chat/conversations")))
                 .andExpect(jsonPath("$.content[0].unreadCount").value(0));

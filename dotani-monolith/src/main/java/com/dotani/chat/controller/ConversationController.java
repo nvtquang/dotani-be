@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import com.dotani.chat.dto.ChatReadEvent;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -94,7 +95,13 @@ public class ConversationController {
             @PathVariable("id") String id,
             @AuthenticationPrincipal CurrentUser currentUser
     ) {
-        return conversationService.markRead(id, currentUser);
+        ConversationResponse response = conversationService.markRead(id, currentUser);
+        // lets the other members show "seen" right away
+        messagingTemplate.convertAndSend(
+                "/topic/conversations/" + id + "/read",
+                new ChatReadEvent(currentUser.memberId(), response.readStates().get(currentUser.memberId()))
+        );
+        return response;
     }
 
     @GetMapping("/{id}/messages")

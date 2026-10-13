@@ -23,7 +23,10 @@ import com.dotani.content.repository.PostSpecifications;
 import com.dotani.shared.security.CurrentUser;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.time.Instant;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -60,6 +63,25 @@ public class PostService {
         this.storageService = storageService;
         this.auditLogService = auditLogService;
         this.events = events;
+    }
+
+    /** Newest posts before the cursor, for the mixed feed. */
+    @Transactional(readOnly = true)
+    public List<PostResponse> findCreatedBefore(Instant before, int size, CurrentUser currentUser) {
+        Specification<Post> specification = Specification
+                .where(PostSpecifications.visibleTo(currentUser))
+                .and(PostSpecifications.createdBefore(before));
+        return postMapper.toResponsePage(postRepository.findAll(
+                specification, PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")))).getContent();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PostResponse> searchByTitle(String text, int size, CurrentUser currentUser) {
+        Specification<Post> specification = Specification
+                .where(PostSpecifications.visibleTo(currentUser))
+                .and(PostSpecifications.titleContains(text));
+        return postMapper.toResponsePage(postRepository.findAll(
+                specification, PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "createdAt")))).getContent();
     }
 
     @Transactional(readOnly = true)

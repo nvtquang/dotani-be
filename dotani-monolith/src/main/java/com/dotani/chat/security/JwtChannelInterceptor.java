@@ -105,7 +105,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         if (destination == null || !destination.startsWith(prefix)) {
             return null;
         }
-        return destination.substring(prefix.length());
+        return firstSegment(destination.substring(prefix.length()));
     }
 
     private String conversationIdFromApplicationDestination(String destination) {
@@ -113,6 +113,11 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         if (destination == null || !destination.startsWith(prefix)) {
             return null;
         }
-        return destination.substring(prefix.length());
+        return firstSegment(destination.substring(prefix.length()));
+    }
+
+    private static String firstSegment(String path) {
+        int slash = path.indexOf('/');
+        return slash < 0 ? path : path.substring(0, slash);
     }
 }

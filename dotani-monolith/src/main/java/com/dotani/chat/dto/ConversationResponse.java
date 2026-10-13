@@ -16,6 +16,8 @@ public record ConversationResponse(
         Instant lastMessageAt,
         String lastMessagePreview,
         long unreadCount,
+        // when each member last read the conversation (null = never); drives "seen" marks
+        Map<String, Instant> readStates,
         Instant createdAt,
         Instant updatedAt
 ) {

@@ -4,6 +4,7 @@ import com.dotani.shared.time.AppTime;
 import com.dotani.content.entity.Post;
 import com.dotani.content.entity.PostStatus;
 import com.dotani.content.entity.PostType;
+import com.dotani.shared.persistence.TextSearch;
 import com.dotani.shared.security.CurrentUser;
 import com.dotani.shared.security.OrgScopePolicy;
 import jakarta.persistence.criteria.Predicate;
@@ -49,6 +50,16 @@ public final class PostSpecifications {
         return (root, query, criteriaBuilder) -> createdAfter == null
                 ? criteriaBuilder.conjunction()
                 : criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), createdAfter);
+    }
+
+    public static Specification<Post> createdBefore(Instant before) {
+        return (root, query, criteriaBuilder) -> before == null
+                ? criteriaBuilder.conjunction()
+                : criteriaBuilder.lessThan(root.get("createdAt"), before);
+    }
+
+    public static Specification<Post> titleContains(String text) {
+        return (root, query, criteriaBuilder) -> TextSearch.contains(criteriaBuilder, root.get("title"), text);
     }
 
     public static Specification<Post> visibleTo(CurrentUser currentUser) {

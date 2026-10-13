@@ -1,5 +1,6 @@
 package com.dotani.member.repository;
 
+import com.dotani.shared.persistence.TextSearch;
 import com.dotani.auth.entity.UserAccount;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -19,14 +20,13 @@ public final class MemberSpecifications {
             if (keyword == null || keyword.isBlank()) {
                 return criteriaBuilder.conjunction();
             }
-            String pattern = "%" + keyword.trim().toLowerCase() + "%";
             Join<Member, UserAccount> account = root.join("account", JoinType.LEFT);
             return criteriaBuilder.or(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("fullName")), pattern),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("phone")), pattern),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), pattern),
-                    criteriaBuilder.like(criteriaBuilder.lower(account.get("email")), pattern),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("address")), pattern)
+                    TextSearch.contains(criteriaBuilder, root.get("fullName"), keyword),
+                    TextSearch.contains(criteriaBuilder, root.get("phone"), keyword),
+                    TextSearch.contains(criteriaBuilder, root.get("email"), keyword),
+                    TextSearch.contains(criteriaBuilder, account.get("email"), keyword),
+                    TextSearch.contains(criteriaBuilder, root.get("address"), keyword)
             );
         };
     }

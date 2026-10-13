@@ -17,6 +17,8 @@ public record EventResponse(
         String organizationId,
         String organizationName,
         Integer maxParticipants,
+        // members registered GOING; with maxParticipants gives the seats left
+        long goingCount,
         EventStatus status,
         String createdBy,
         List<EventAttachmentResponse> attachments,

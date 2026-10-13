@@ -1,7 +1,9 @@
 package com.dotani.event.mapper;
 
 import com.dotani.member.service.NameLookup;
+import com.dotani.event.repository.EventParticipationRepository;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import com.dotani.event.dto.EventRequest;
 import com.dotani.event.dto.EventResponse;
@@ -12,20 +14,28 @@ import org.springframework.stereotype.Component;
 public class EventMapper {
 
     private final NameLookup nameLookup;
+    private final EventParticipationRepository participationRepository;
 
-    public EventMapper(NameLookup nameLookup) {
+    public EventMapper(NameLookup nameLookup, EventParticipationRepository participationRepository) {
         this.nameLookup = nameLookup;
+        this.participationRepository = participationRepository;
     }
 
 
     public EventResponse toResponse(Event event) {
-        return toResponse(event, names(List.of(event)));
+        return toResponse(event, names(List.of(event)), participationRepository.goingCounts(List.of(event.getId())));
     }
 
-    /** Maps a page with one name lookup for all of its items. */
+    /** Maps a page with one name lookup and one GOING count query for all of its items. */
     public Page<EventResponse> toResponsePage(Page<Event> page) {
-        NameLookup.Names names = names(page.getContent());
-        return page.map(event -> toResponse(event, names));
+        List<EventResponse> items = toResponses(page.getContent());
+        return new org.springframework.data.domain.PageImpl<>(items, page.getPageable(), page.getTotalElements());
+    }
+
+    public List<EventResponse> toResponses(List<Event> events) {
+        NameLookup.Names names = names(events);
+        Map<String, Long> goingCounts = participationRepository.goingCounts(events.stream().map(Event::getId).toList());
+        return events.stream().map(event -> toResponse(event, names, goingCounts)).toList();
     }
 
     private NameLookup.Names names(List<Event> items) {
@@ -35,7 +45,7 @@ public class EventMapper {
         );
     }
 
-    private EventResponse toResponse(Event event, NameLookup.Names names) {
+    private EventResponse toResponse(Event event, NameLookup.Names names, Map<String, Long> goingCounts) {
         return new EventResponse(
                 event.getId(),
                 event.getTitle(),
@@ -48,6 +58,7 @@ public class EventMapper {
                 event.getOrganizationId(),
                 names.organization(event.getOrganizationId()),
                 event.getMaxParticipants(),
+                goingCounts.getOrDefault(event.getId(), 0L),
                 event.getStatus(),
                 event.getCreatedBy(),
                 event.getAttachments().stream()

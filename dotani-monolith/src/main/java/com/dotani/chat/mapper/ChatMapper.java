@@ -41,9 +41,16 @@ public class ChatMapper {
                 lastMessageAt,
                 lastMessagePreview,
                 unreadCount,
+                readStates(conversation),
                 conversation.getCreatedAt(),
                 conversation.getUpdatedAt()
         );
+    }
+
+    private static Map<String, Instant> readStates(Conversation conversation) {
+        Map<String, Instant> states = new java.util.LinkedHashMap<>();
+        conversation.getMembers().forEach(member -> states.put(member.getMemberId(), member.getLastReadAt()));
+        return states;
     }
 
     public MessageResponse toResponse(Message message) {

@@ -42,12 +42,10 @@ public class EventDashboardService {
                 .and(EventSpecifications.hasStatus(EventStatus.PUBLISHED))
                 .and(EventSpecifications.upcoming(true));
 
-        List<EventResponse> upcomingEvents = eventRepository.findAll(
-                        upcomingSpec,
-                        PageRequest.of(0, DASHBOARD_EVENT_LIMIT, Sort.by("startTime").ascending())
-                )
-                .map(eventMapper::toResponse)
-                .toList();
+        List<EventResponse> upcomingEvents = eventMapper.toResponses(eventRepository.findAll(
+                upcomingSpec,
+                PageRequest.of(0, DASHBOARD_EVENT_LIMIT, Sort.by("startTime").ascending())
+        ).getContent());
 
         String organizationScope = organizationScope(currentUser);
         long registeredParticipantCount = currentUser.isMember() && currentUser.memberId() != null
@@ -55,11 +53,11 @@ public class EventDashboardService {
                 : participationRepository.countByStatusScoped(ParticipationStatus.GOING, organizationScope);
 
         List<EventResponse> registeredEvents = currentUser.isMember() && currentUser.memberId() != null
-                ? participationRepository.findByMemberIdAndEvent_DeletedAtIsNullOrderByUpdatedAtDesc(currentUser.memberId())
+                ? eventMapper.toResponses(participationRepository.findByMemberIdAndEvent_DeletedAtIsNullOrderByUpdatedAtDesc(currentUser.memberId())
                         .stream()
-                        .map(participation -> eventMapper.toResponse(participation.getEvent()))
+                        .map(participation -> participation.getEvent())
                         .limit(DASHBOARD_EVENT_LIMIT)
-                        .toList()
+                        .toList())
                 : List.of();
 
         return new EventDashboardSummaryResponse(

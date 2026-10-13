@@ -15,6 +15,7 @@ import com.dotani.audit.service.AuditDiff;
 import com.dotani.audit.service.AuditLogService;
 
 import com.dotani.event.dto.EventRequest;
+import com.dotani.event.dto.EventFilter;
 import com.dotani.event.dto.EventResponse;
 import com.dotani.event.entity.Event;
 import com.dotani.event.entity.EventStatus;
@@ -25,7 +26,10 @@ import com.dotani.event.repository.EventRepository;
 import com.dotani.event.repository.EventSpecifications;
 import com.dotani.shared.security.CurrentUser;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -67,23 +71,38 @@ public class EventService {
         this.eventStorageService = eventStorageService;
     }
 
+    /** Newest-created events before the cursor, for the mixed feed. */
     @Transactional(readOnly = true)
-    public Page<EventResponse> findAll(
-            EventType type,
-            String organizationId,
-            EventStatus status,
-            LocalDate date,
-            Boolean upcoming,
-            Pageable pageable,
-            CurrentUser currentUser
-    ) {
+    public List<EventResponse> findCreatedBefore(Instant before, int size, CurrentUser currentUser) {
         Specification<Event> specification = Specification
                 .where(EventSpecifications.withinReadScope(currentUser))
-                .and(EventSpecifications.hasType(type))
-                .and(EventSpecifications.hasOrganization(organizationId))
-                .and(EventSpecifications.hasStatus(status))
-                .and(EventSpecifications.onDate(date))
-                .and(EventSpecifications.upcoming(upcoming));
+                .and(EventSpecifications.createdBefore(before));
+        return eventMapper.toResponses(eventRepository.findAll(
+                specification, PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "createdAt", "id"))).getContent());
+    }
+
+    @Transactional(readOnly = true)
+    public List<EventResponse> searchByTitle(String text, int size, CurrentUser currentUser) {
+        Specification<Event> specification = Specification
+                .where(EventSpecifications.withinReadScope(currentUser))
+                .and(EventSpecifications.titleContains(text));
+        return eventMapper.toResponses(eventRepository.findAll(
+                specification, PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "startTime"))).getContent());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EventResponse> findAll(EventFilter filter, Pageable pageable, CurrentUser currentUser) {
+        Specification<Event> specification = Specification
+                .where(EventSpecifications.withinReadScope(currentUser))
+                .and(EventSpecifications.hasType(filter.type()))
+                .and(EventSpecifications.hasOrganization(filter.organizationId()))
+                .and(EventSpecifications.hasStatus(filter.status()))
+                .and(EventSpecifications.onDate(filter.date()))
+                .and(EventSpecifications.when(filter.when()))
+                .and(EventSpecifications.startsBetween(filter.from(), filter.to()));
+        if (filter.participating()) {
+            specification = specification.and(EventSpecifications.participatedBy(currentUser.memberId()));
+        }
 
         return eventMapper.toResponsePage(eventRepository.findAll(specification, pageable));
     }
